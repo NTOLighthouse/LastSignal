@@ -7,7 +7,7 @@ namespace LastSignal
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void CreateGame()
         {
-            if (Object.FindFirstObjectByType<LastSignalGame>() != null)
+            if (Object.FindAnyObjectByType<LastSignalGame>() != null)
             {
                 return;
             }
