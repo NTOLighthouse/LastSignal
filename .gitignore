@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Unity-generated data. Keep Assets, Packages and ProjectSettings.
+/UnityProject/[Ll]ibrary/
+/UnityProject/[Tt]emp/
+/UnityProject/[Oo]bj/
+/UnityProject/[Bb]uild/
+/UnityProject/[Bb]uilds/
+/UnityProject/[Ll]ogs/
+/UnityProject/[Uu]ser[Ss]ettings/
+/UnityProject/MemoryCaptures/
+/UnityProject/Recordings/
+
+# IDE-generated files
+/UnityProject/.idea/
+/UnityProject/.vs/
+/UnityProject/.vscode/
+/UnityProject/*.csproj
+/UnityProject/*.sln
+/UnityProject/*.slnx
+/UnityProject/*.suo
+/UnityProject/*.user
+/UnityProject/*.userprefs
+
+# Crash and temporary files
+/UnityProject/sysinfo.txt
+/UnityProject/*.tmp
+/UnityProject/*.pidb
+/UnityProject/*.booproj
