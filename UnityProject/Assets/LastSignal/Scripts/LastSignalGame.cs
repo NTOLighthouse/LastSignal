@@ -81,9 +81,16 @@ namespace LastSignal
             }
         }
 
+        [SerializeField] private bool showOverlay = false;
+
         // Главная точка отрисовки: выбирает нужный экран и масштабирует интерфейс.
         private void OnGUI()
         {
+            if (!showOverlay)
+            {
+                return;
+            }
+
             EnsureStyles();
 
             float scale = Mathf.Min(Screen.width / DesignWidth, Screen.height / DesignHeight);
