@@ -36,7 +36,6 @@ namespace LastSignal
         ForeignVoice
     }
 
-    [Serializable]
     // Один вариант ответа: надпись на кнопке, последствие и возможная отметка сюжета.
     public sealed class ChoiceDefinition
     {
@@ -62,7 +61,6 @@ namespace LastSignal
         }
     }
 
-    [Serializable]
     // Полное описание одного звонка, которое затем показывает игровой экран.
     public sealed class CallDefinition
     {

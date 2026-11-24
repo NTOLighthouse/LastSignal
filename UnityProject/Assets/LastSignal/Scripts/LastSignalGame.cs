@@ -24,20 +24,21 @@ namespace LastSignal
             Ending
         }
 
-        private readonly Color _ink = new Color32(230, 216, 178, 255);
-        private readonly Color _dimInk = new Color32(148, 137, 107, 255);
-        private readonly Color _amber = new Color32(231, 153, 56, 255);
-        private readonly Color _dark = new Color32(22, 20, 16, 255);
-        private readonly Color _panel = new Color32(40, 36, 27, 245);
-        private readonly Color _red = new Color32(178, 52, 38, 255);
-        private readonly Color _green = new Color32(93, 146, 82, 255);
+        // Цвета переводятся в линейное пространство, чтобы в Game View они не становились серыми.
+        private readonly Color _ink = UiColor(226, 216, 190);
+        private readonly Color _dimInk = UiColor(142, 135, 115);
+        private readonly Color _amber = UiColor(196, 137, 67);
+        private readonly Color _dark = UiColor(13, 15, 13);
+        private readonly Color _panel = UiColor(18, 20, 18, 248);
+        private readonly Color _panelSoft = UiColor(24, 25, 22, 242);
+        private readonly Color _border = UiColor(83, 76, 58);
+        private readonly Color _red = UiColor(133, 55, 42);
 
         private GameState _state = new GameState();
         private ScreenMode _mode = ScreenMode.MainMenu;
         private ScreenMode _returnMode = ScreenMode.Playing;
         private EndingType _ending;
         private float _patienceLeft;
-        private float _callStartedAt;
         private bool _stylesReady;
 
         private GUIStyle _title;
@@ -46,8 +47,11 @@ namespace LastSignal
         private GUIStyle _small;
         private GUIStyle _button;
         private GUIStyle _dangerButton;
-        private GUIStyle _box;
-        private GUIStyle _label;
+        private Font _uiFont;
+        private float _uiScale = 1f;
+        private float _offsetX;
+        private float _offsetY;
+        private float _styleScale;
 
         // Возвращает текущий звонок и не позволяет выйти за границы списка.
         private CallDefinition CurrentCall
@@ -81,7 +85,7 @@ namespace LastSignal
             }
         }
 
-        [SerializeField] private bool showOverlay = false;
+        [SerializeField] private bool showOverlay = true;
 
         // Главная точка отрисовки: выбирает нужный экран и масштабирует интерфейс.
         private void OnGUI()
@@ -91,15 +95,10 @@ namespace LastSignal
                 return;
             }
 
-            EnsureStyles();
-
-            float scale = Mathf.Min(Screen.width / DesignWidth, Screen.height / DesignHeight);
-            float offsetX = (Screen.width - DesignWidth * scale) * 0.5f;
-            float offsetY = (Screen.height - DesignHeight * scale) * 0.5f;
-            GUI.matrix = Matrix4x4.TRS(new Vector3(offsetX, offsetY, 0f), Quaternion.identity, Vector3.one * scale);
-
-            DrawRect(new Rect(0, 0, DesignWidth, DesignHeight), _dark);
-            DrawNoiseLines();
+            _uiScale = Mathf.Min(Screen.width / DesignWidth, Screen.height / DesignHeight);
+            _offsetX = (Screen.width - DesignWidth * _uiScale) * 0.5f;
+            _offsetY = (Screen.height - DesignHeight * _uiScale) * 0.5f;
+            EnsureStyles(_uiScale);
 
             switch (_mode)
             {
@@ -128,39 +127,30 @@ namespace LastSignal
                     DrawEnding();
                     break;
             }
-
-            GUI.matrix = Matrix4x4.identity;
         }
 
         // Главное меню с началом новой игры и продолжением сохранения.
         private void DrawMainMenu()
         {
-            GUI.Label(new Rect(70, 52, 820, 116), "ПОСЛЕДНИЙ\nСИГНАЛ", _title);
-            GUI.Label(new Rect(72, 184, 600, 60), "Одна комната. Три ночи. Голоса в эфире.", _heading);
-            GUI.Label(new Rect(72, 252, 540, 90),
+            DrawPanel(new Rect(48, 66, 430, 430));
+            DrawLabel(new Rect(78, 96, 360, 104), "ПОСЛЕДНИЙ\nСИГНАЛ", _title);
+            DrawRect(new Rect(78, 211, 128, 2), _amber);
+            DrawLabel(new Rect(78, 230, 340, 48), "Одна комната. Три ночи. Голоса в эфире.", _heading);
+            DrawLabel(new Rect(78, 292, 340, 94),
                 "Ты никого не видишь. Только слышишь.\nКаждый приказ, каждая просьба и каждая ложь\nпроходят через твои наушники.", _body);
+            DrawLabel(new Rect(78, 394, 340, 22), "УЗЕЛ СВЯЗИ «МАЯК»", _small);
 
-            DrawRect(new Rect(670, 85, 210, 310), new Color32(29, 25, 18, 255));
-            DrawRect(new Rect(695, 120, 160, 18), _amber);
-            for (int i = 0; i < 6; i++)
-            {
-                Color lamp = i == 1 ? _green : i == 4 ? _red : _amber;
-                DrawLamp(new Rect(706 + (i % 3) * 50, 174 + (i / 3) * 60, 18, 18), lamp, true);
-            }
-            GUI.Label(new Rect(696, 310, 160, 56), "УЗЕЛ СВЯЗИ\n«МАЯК»", _heading);
-
-            if (GUI.Button(new Rect(72, 370, 260, 44), "НОВАЯ ИГРА", _button))
+            if (DrawButton(new Rect(78, 430, 158, 40), "НОВАЯ ИГРА", _button))
             {
                 StartNewGame();
             }
 
             GUI.enabled = PlayerPrefs.HasKey(SaveKey);
-            if (GUI.Button(new Rect(72, 425, 260, 44), "ПРОДОЛЖИТЬ", _button))
+            if (DrawButton(new Rect(250, 430, 168, 40), "ПРОДОЛЖИТЬ", _button))
             {
                 LoadGame();
             }
             GUI.enabled = true;
-
         }
 
         // Основной экран звонка: реплика слева, решения справа, справочники снизу.
@@ -169,43 +159,43 @@ namespace LastSignal
             CallDefinition call = CurrentCall;
             DrawTopBar(call);
 
-            GUI.Box(new Rect(32, 88, 570, 354), GUIContent.none, _box);
-            GUI.Label(new Rect(56, 108, 510, 28), $"ЛИНИЯ {call.Number:00} / 24   ·   {call.CallSign}", _heading);
-            GUI.Label(new Rect(56, 142, 510, 24), call.Speaker.ToUpperInvariant(), _small);
-            DrawRect(new Rect(56, 174, 520, 2), _amber);
-            GUI.Label(new Rect(56, 194, 510, 132), $"— {call.Transcript}", _body);
-            GUI.Label(new Rect(56, 336, 510, 72), $"УЛИКА: {call.Clue}", _small);
+            DrawPanel(new Rect(26, 236, 590, 238));
+            DrawLabel(new Rect(48, 254, 542, 26), $"ЛИНИЯ {call.Number:00} / 24   ·   {call.CallSign}", _heading);
+            DrawLabel(new Rect(48, 284, 542, 20), call.Speaker.ToUpperInvariant(), _small);
+            DrawRect(new Rect(48, 312, 542, 2), _amber);
+            DrawLabel(new Rect(48, 328, 542, 82), $"— {call.Transcript}", _body);
+            DrawLabel(new Rect(48, 418, 542, 44), $"УЛИКА: {call.Clue}", _small);
 
-            GUI.Box(new Rect(622, 88, 306, 354), GUIContent.none, _box);
-            GUI.Label(new Rect(646, 108, 250, 26), "РЕШЕНИЕ", _heading);
+            DrawPanel(new Rect(634, 236, 300, 238), _panelSoft);
+            DrawLabel(new Rect(656, 254, 256, 26), "РЕШЕНИЕ", _heading);
 
             ChoiceDefinition[] availableChoices = AvailableChoices(call).ToArray();
-            float y = 145f;
+            float y = 292f;
             foreach (ChoiceDefinition choice in availableChoices)
             {
                 GUI.enabled = interactive;
-                float height = availableChoices.Length >= 4 ? 50f : 57f;
-                if (GUI.Button(new Rect(646, y, 258, height), choice.Label, _button))
+                float height = availableChoices.Length >= 4 ? 36f : availableChoices.Length == 3 ? 43f : 50f;
+                if (DrawButton(new Rect(656, y, 256, height), choice.Label, _button))
                 {
                     SelectChoice(choice, false);
                 }
-                y += height + 11f;
+                y += height + 8f;
             }
             GUI.enabled = true;
 
             if (call.PatienceSeconds > 0f)
             {
                 float ratio = Mathf.Clamp01(_patienceLeft / call.PatienceSeconds);
-                DrawRect(new Rect(646, 405, 258, 8), new Color32(75, 62, 42, 255));
-                DrawRect(new Rect(646, 405, 258 * ratio, 8), ratio < 0.3f ? _red : _amber);
-                GUI.Label(new Rect(646, 416, 258, 18), $"ТЕРПЕНИЕ ЛИНИИ: {Mathf.CeilToInt(_patienceLeft)} С", _small);
+                DrawRect(new Rect(656, 449, 256, 5), UiColor(55, 52, 43));
+                DrawRect(new Rect(656, 449, 256 * ratio, 5), ratio < 0.3f ? _red : _amber);
+                DrawLabel(new Rect(656, 456, 256, 16), $"ТЕРПЕНИЕ: {Mathf.CeilToInt(_patienceLeft)} С", _small);
             }
 
             GUI.enabled = interactive;
-            if (GUI.Button(new Rect(32, 462, 150, 40), "ЖУРНАЛ", _button)) OpenOverlay(ScreenMode.Journal);
-            if (GUI.Button(new Rect(194, 462, 150, 40), "КНИГА", _button)) OpenOverlay(ScreenMode.CodeBook);
-            if (GUI.Button(new Rect(356, 462, 150, 40), "КАРТА", _button)) OpenOverlay(ScreenMode.Map);
-            if (GUI.Button(new Rect(732, 462, 196, 40), "СНЯТЬ НАУШНИКИ", _dangerButton))
+            if (DrawButton(new Rect(26, 490, 132, 34), "ЖУРНАЛ", _button)) OpenOverlay(ScreenMode.Journal);
+            if (DrawButton(new Rect(168, 490, 132, 34), "КНИГА", _button)) OpenOverlay(ScreenMode.CodeBook);
+            if (DrawButton(new Rect(310, 490, 132, 34), "КАРТА", _button)) OpenOverlay(ScreenMode.Map);
+            if (DrawButton(new Rect(746, 490, 188, 34), "СНЯТЬ НАУШНИКИ", _dangerButton))
             {
                 Finish(FinalAction.RemoveHeadphones);
             }
@@ -214,29 +204,32 @@ namespace LastSignal
 
         private void DrawTopBar(CallDefinition call)
         {
-            DrawRect(new Rect(0, 0, 960, 66), new Color32(13, 12, 10, 255));
-            GUI.Label(new Rect(32, 17, 310, 34), "УЗЕЛ «МАЯК»", _heading);
-            GUI.Label(new Rect(350, 17, 250, 34), $"НОЧЬ {call.Night}   ·   {call.Time}", _heading);
-            GUI.Label(new Rect(630, 20, 80, 24), "ЛИНИИ", _small);
-            DrawLamp(new Rect(708, 21, 18, 18), _amber, true);
-            DrawLamp(new Rect(744, 21, 18, 18), call.Night >= 2 ? _amber : _dimInk, call.Night >= 2);
-            DrawLamp(new Rect(780, 21, 18, 18), call.Night >= 3 ? _red : _dimInk, call.Night >= 3);
-            GUI.Label(new Rect(824, 20, 104, 24), $"{call.Number:00}/24", _small);
+            DrawRect(new Rect(0, 0, 960, 54), UiColor(12, 14, 12, 250));
+            DrawRect(new Rect(0, 53, 960, 1), _border);
+            DrawLabel(new Rect(26, 15, 280, 26), "УЗЕЛ «МАЯК»", _heading);
+            DrawLabel(new Rect(340, 15, 244, 26), $"НОЧЬ {call.Night}   ·   {call.Time}", _heading);
+            DrawLabel(new Rect(644, 18, 62, 20), "ЛИНИИ", _small);
+            DrawLamp(new Rect(706, 18, 14, 14), _amber, true);
+            DrawLamp(new Rect(738, 18, 14, 14), call.Night >= 2 ? _amber : _dimInk, call.Night >= 2);
+            DrawLamp(new Rect(770, 18, 14, 14), call.Night >= 3 ? _red : _dimInk, call.Night >= 3);
+            DrawLabel(new Rect(828, 18, 104, 20), $"{call.Number:00}/24", _small);
         }
 
         // Короткая заставка между ночами показывает, как меняется комната.
         private void DrawNightInterlude()
         {
+            DrawPanel(new Rect(150, 116, 660, 318));
             int night = CurrentCall.Night;
             string heading = night == 2 ? "НОЧЬ 2 · ЧУЖИЕ ГОЛОСА" : "НОЧЬ 3 · РАССВЕТ";
             string body = night == 2
                 ? "На столе вторая кружка, пустая. Строка «Берёза» в книге зачёркнута карандашом. На потолке трещина. Время 22:00."
                 : "Левая ладонь Ларина перевязана бинтом, на костяшках ссадины. Время 03:00. Где-то далеко глухо бухает, пыль на столе чуть вздрагивает.";
 
-            GUI.Label(new Rect(90, 122, 780, 80), heading, _title);
-            GUI.Label(new Rect(150, 245, 660, 110), body, _body);
-            GUI.Label(new Rect(150, 345, 660, 36), "СОХРАНЕНИЕ ВЫПОЛНЕНО", _small);
-            if (GUI.Button(new Rect(350, 410, 260, 48), "НАДЕТЬ НАУШНИКИ", _button))
+            DrawLabel(new Rect(184, 150, 592, 58), heading, _title);
+            DrawRect(new Rect(184, 218, 128, 2), _amber);
+            DrawLabel(new Rect(184, 242, 592, 96), body, _body);
+            DrawLabel(new Rect(184, 344, 300, 24), "СОХРАНЕНИЕ ВЫПОЛНЕНО", _small);
+            if (DrawButton(new Rect(184, 380, 240, 36), "НАДЕТЬ НАУШНИКИ", _button))
             {
                 _mode = ScreenMode.Playing;
                 ResetPatience();
@@ -249,7 +242,7 @@ namespace LastSignal
             DrawOverlayFrame("ЖУРНАЛ СВЯЗИ");
             if (_state.Journal.Count == 0)
             {
-                GUI.Label(new Rect(100, 130, 760, 40), "Записей пока нет.", _body);
+                DrawLabel(new Rect(100, 130, 760, 40), "Записей пока нет.", _body);
             }
             else
             {
@@ -257,8 +250,8 @@ namespace LastSignal
                 float y = 116f;
                 foreach (JournalEntry entry in entries)
                 {
-                    GUI.Label(new Rect(92, y, 126, 24), $"{entry.CallNumber:00} · {entry.CallSign}", _small);
-                    GUI.Label(new Rect(220, y, 645, 42), $"{entry.Decision} — {entry.Consequence}", _small);
+                    DrawLabel(new Rect(92, y, 126, 24), $"{entry.CallNumber:00} · {entry.CallSign}", _small);
+                    DrawLabel(new Rect(220, y, 645, 42), $"{entry.Decision} — {entry.Consequence}", _small);
                     y += 44f;
                 }
             }
@@ -280,7 +273,7 @@ namespace LastSignal
                 "ЯКОРЬ · всегда требует пароль\n" +
                 "КУЗНИЦА · «Кузница беспокоит», ворчит\n\n" +
                 "ПОМЕТКА: пароль может знать враг, привычку — нет.";
-            GUI.Label(new Rect(105, 120, 730, 330), text, _body);
+            DrawLabel(new Rect(105, 120, 730, 330), text, _body);
             DrawOverlayClose();
         }
 
@@ -288,39 +281,75 @@ namespace LastSignal
         private void DrawMap()
         {
             DrawOverlayFrame("КАРТА УЧАСТКА · РЕКА ВЕЖА");
-            DrawRect(new Rect(112, 130, 700, 250), new Color32(55, 51, 38, 255));
-            DrawRect(new Rect(445, 130, 38, 250), new Color32(48, 85, 90, 255));
-            GUI.Label(new Rect(438, 230, 80, 24), "ВЕЖА", _small);
-            GUI.Label(new Rect(150, 172, 180, 30), "18-Б · ШКОЛА", _body);
-            GUI.Label(new Rect(170, 280, 180, 30), "18-В · ОВРАГ", _body);
-            GUI.Label(new Rect(570, 185, 180, 30), "ВЫСОТА · «ЁЖ»", _body);
-            GUI.Label(new Rect(555, 305, 210, 30), "12-Б · «МАЯК»", _body);
-            DrawRect(new Rect(420, 242, 88, 18), _amber);
-            GUI.Label(new Rect(395, 265, 160, 24), "МОСТ", _small);
+            Rect map = new Rect(112, 130, 700, 250);
+            DrawRect(map, UiColor(38, 37, 29));
+            DrawRect(new Rect(map.x, map.y, map.width, 1), _border);
+            DrawRect(new Rect(map.x, map.yMax - 1, map.width, 1), _border);
+            DrawRect(new Rect(map.x, map.y, 1, map.height), _border);
+            DrawRect(new Rect(map.xMax - 1, map.y, 1, map.height), _border);
+
+            // Ровная координатная сетка делает схему похожей на рабочую военную карту.
+            Color grid = UiColor(58, 55, 42);
+            for (int column = 1; column < 7; column++)
+            {
+                DrawRect(new Rect(map.x + column * 100, map.y, 1, map.height), grid);
+            }
+            for (int row = 1; row < 5; row++)
+            {
+                DrawRect(new Rect(map.x, map.y + row * 50, map.width, 1), grid);
+            }
+
+            // Река идёт с небольшими изломами, мост точно пересекает её по центру.
+            Color river = UiColor(38, 78, 82);
+            DrawRect(new Rect(446, 130, 26, 62), river);
+            DrawRect(new Rect(452, 192, 26, 63), river);
+            DrawRect(new Rect(446, 255, 26, 65), river);
+            DrawRect(new Rect(452, 320, 26, 60), river);
+            DrawRect(new Rect(420, 246, 84, 14), _border);
+            DrawRect(new Rect(422, 248, 80, 10), _amber);
+            DrawLabel(new Rect(412, 264, 104, 18), "МОСТ", _small);
+            DrawLabel(new Rect(480, 218, 80, 18), "ВЕЖА", _small);
+
+            DrawMapMarker(148, 164, "18-Б", "ШКОЛА");
+            DrawMapMarker(174, 292, "18-В", "ОВРАГ");
+            DrawMapMarker(588, 174, "ВЫСОТА", "«ЁЖ»");
+            DrawMapMarker(566, 302, "12-Б", "«МАЯК»");
+
+            DrawLabel(new Rect(780, 142, 18, 18), "С", _small);
+            DrawRect(new Rect(786, 160, 2, 28), _amber);
+            DrawRect(new Rect(781, 160, 12, 2), _amber);
             DrawOverlayClose();
+        }
+
+        private void DrawMapMarker(float x, float y, string code, string label)
+        {
+            DrawRect(new Rect(x, y, 12, 12), _amber);
+            DrawRect(new Rect(x + 4, y + 4, 4, 4), _dark);
+            DrawLabel(new Rect(x + 20, y - 3, 190, 22), $"{code} · {label}", _body);
         }
 
         // Экран концовки показывает результат и приглашает пройти игру иначе.
         private void DrawEnding()
         {
             EndingDefinition ending = CallDatabase.Endings[_ending];
-            GUI.Label(new Rect(66, 54, 830, 76), ending.Title, _title);
-            GUI.Label(new Rect(70, 145, 820, 34), ending.Mood.ToUpperInvariant(), _heading);
-            GUI.Box(new Rect(68, 200, 824, 190), GUIContent.none, _box);
-            GUI.Label(new Rect(98, 225, 760, 128), ending.Summary, _body);
+            DrawPanel(new Rect(100, 62, 760, 416));
+            DrawLabel(new Rect(134, 92, 692, 60), ending.Title, _title);
+            DrawLabel(new Rect(134, 158, 692, 30), ending.Mood.ToUpperInvariant(), _heading);
+            DrawRect(new Rect(134, 201, 128, 2), _amber);
+            DrawLabel(new Rect(134, 228, 692, 116), ending.Summary, _body);
 
             int savedCount = new[]
             {
                 StoryFlag.YozhSaved, StoryFlag.TopolSaved, StoryFlag.SorokaSaved,
                 StoryFlag.RomashkaSaved, StoryFlag.ShiloSignalUnderstood, StoryFlag.TanksDestroyed
             }.Count(_state.Has);
-            GUI.Label(new Rect(98, 350, 760, 24), $"ИТОГИ ЖУРНАЛА: {savedCount} ИЗ 6 КЛЮЧЕВЫХ ЛИНИЙ СОХРАНЕНЫ", _small);
+            DrawLabel(new Rect(134, 354, 692, 24), $"ИТОГИ ЖУРНАЛА: {savedCount} ИЗ 6 КЛЮЧЕВЫХ ЛИНИЙ СОХРАНЕНЫ", _small);
 
-            if (GUI.Button(new Rect(210, 430, 250, 48), "ПРОЙТИ ИНАЧЕ", _button))
+            if (DrawButton(new Rect(134, 404, 220, 38), "ПРОЙТИ ИНАЧЕ", _button))
             {
                 StartNewGame();
             }
-            if (GUI.Button(new Rect(500, 430, 250, 48), "ГЛАВНОЕ МЕНЮ", _button))
+            if (DrawButton(new Rect(370, 404, 220, 38), "ГЛАВНОЕ МЕНЮ", _button))
             {
                 _mode = ScreenMode.MainMenu;
             }
@@ -328,15 +357,15 @@ namespace LastSignal
 
         private void DrawOverlayFrame(string title)
         {
-            DrawRect(new Rect(52, 50, 856, 440), new Color32(16, 14, 11, 252));
-            GUI.Box(new Rect(64, 62, 832, 416), GUIContent.none, _box);
-            GUI.Label(new Rect(92, 82, 700, 34), title, _heading);
+            DrawRect(new Rect(0, 0, 960, 540), new Color(0f, 0f, 0f, 0.58f));
+            DrawPanel(new Rect(64, 62, 832, 416));
+            DrawLabel(new Rect(92, 82, 700, 34), title, _heading);
             DrawRect(new Rect(92, 116, 744, 2), _amber);
         }
 
         private void DrawOverlayClose()
         {
-            if (GUI.Button(new Rect(720, 420, 150, 38), "ЗАКРЫТЬ", _button))
+            if (DrawButton(new Rect(720, 420, 150, 38), "ЗАКРЫТЬ", _button))
             {
                 _mode = _returnMode;
             }
@@ -464,53 +493,71 @@ namespace LastSignal
         private void ResetPatience()
         {
             _patienceLeft = CurrentCall.PatienceSeconds;
-            _callStartedAt = Time.unscaledTime;
         }
 
-        private void DrawNoiseLines()
+        private Rect ScaleRect(Rect rect)
         {
-            for (int y = 0; y < DesignHeight; y += 8)
-            {
-                DrawRect(new Rect(0, y, DesignWidth, 1), new Color(1f, 1f, 1f, 0.012f));
-            }
+            return new Rect(
+                _offsetX + rect.x * _uiScale,
+                _offsetY + rect.y * _uiScale,
+                rect.width * _uiScale,
+                rect.height * _uiScale);
         }
 
-        private static void DrawRect(Rect rect, Color color)
+        private void DrawLabel(Rect rect, string text, GUIStyle style)
+        {
+            GUI.Label(ScaleRect(rect), text, style);
+        }
+
+        private bool DrawButton(Rect rect, string text, GUIStyle style)
+        {
+            return GUI.Button(ScaleRect(rect), text, style);
+        }
+
+        private void DrawRect(Rect rect, Color color)
         {
             Color old = GUI.color;
             GUI.color = color;
-            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+            GUI.DrawTexture(ScaleRect(rect), Texture2D.whiteTexture);
             GUI.color = old;
+        }
+
+        private void DrawPanel(Rect rect, Color? fill = null)
+        {
+            // Тонкая рамка и глубокий тёмный фон выглядят как часть радиорубки, а не стандартное окно Unity.
+            DrawRect(new Rect(rect.x + 5, rect.y + 6, rect.width, rect.height), new Color(0f, 0f, 0f, 0.42f));
+            DrawRect(rect, _border);
+            DrawRect(new Rect(rect.x + 1, rect.y + 1, rect.width - 2, rect.height - 2), fill ?? _panel);
         }
 
         private void DrawLamp(Rect rect, Color color, bool lit)
         {
-            DrawRect(new Rect(rect.x - 4, rect.y - 4, rect.width + 8, rect.height + 8), new Color32(73, 66, 49, 255));
+            DrawRect(new Rect(rect.x - 4, rect.y - 4, rect.width + 8, rect.height + 8), UiColor(73, 66, 49));
             DrawRect(rect, lit ? color : _dimInk);
         }
 
         // Стили создаются один раз, чтобы не собирать их заново каждый кадр.
-        private void EnsureStyles()
+        private void EnsureStyles(float scale)
         {
-            if (_stylesReady)
+            if (_stylesReady && Mathf.Abs(_styleScale - scale) < 0.01f)
             {
                 return;
             }
 
-            _title = NewStyle(42, FontStyle.Bold, _ink, TextAnchor.UpperLeft, true);
-            _heading = NewStyle(20, FontStyle.Bold, _ink, TextAnchor.UpperLeft, true);
-            _body = NewStyle(18, FontStyle.Normal, _ink, TextAnchor.UpperLeft, true);
-            _small = NewStyle(13, FontStyle.Normal, _dimInk, TextAnchor.UpperLeft, true);
-            _label = NewStyle(15, FontStyle.Bold, _amber, TextAnchor.MiddleLeft, true);
-
-            _box = new GUIStyle(GUI.skin.box)
+            // Arial надёжно показывает кириллицу и сохраняет нормальные интервалы между буквами.
+            _uiFont = Font.CreateDynamicFontFromOSFont("Arial", 18);
+            if (_uiFont == null)
             {
-                border = new RectOffset(2, 2, 2, 2),
-                normal = { background = MakeTexture(_panel) }
-            };
+                _uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            }
 
-            _button = NewButtonStyle(_amber, _dark);
-            _dangerButton = NewButtonStyle(_red, Color.white);
+            _title = NewStyle(38, FontStyle.Bold, _ink, TextAnchor.UpperLeft, true);
+            _heading = NewStyle(18, FontStyle.Bold, _ink, TextAnchor.UpperLeft, true);
+            _body = NewStyle(17, FontStyle.Normal, _ink, TextAnchor.UpperLeft, true);
+            _small = NewStyle(12, FontStyle.Normal, _dimInk, TextAnchor.UpperLeft, true);
+            _button = NewButtonStyle(_amber);
+            _dangerButton = NewButtonStyle(_red);
+            _styleScale = scale;
             _stylesReady = true;
         }
 
@@ -518,7 +565,8 @@ namespace LastSignal
         {
             return new GUIStyle(GUI.skin.label)
             {
-                fontSize = size,
+                font = _uiFont,
+                fontSize = Mathf.Max(1, Mathf.RoundToInt(size * _uiScale)),
                 fontStyle = fontStyle,
                 alignment = alignment,
                 wordWrap = wordWrap,
@@ -526,21 +574,32 @@ namespace LastSignal
             };
         }
 
-        private GUIStyle NewButtonStyle(Color accent, Color text)
+        private GUIStyle NewButtonStyle(Color accent)
         {
-            GUIStyle style = new GUIStyle(GUI.skin.button)
+            GUIStyle style = new GUIStyle
             {
-                fontSize = 14,
+                font = _uiFont,
+                fontSize = Mathf.Max(1, Mathf.RoundToInt(13f * _uiScale)),
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
                 wordWrap = true,
-                border = new RectOffset(2, 2, 2, 2),
-                padding = new RectOffset(10, 10, 7, 7),
-                normal = { background = MakeTexture(new Color32(53, 47, 34, 255)), textColor = text },
-                hover = { background = MakeTexture(accent), textColor = text },
-                active = { background = MakeTexture(new Color(accent.r * 0.75f, accent.g * 0.75f, accent.b * 0.75f)), textColor = text },
-                focused = { background = MakeTexture(accent), textColor = text }
+                border = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(
+                    Mathf.RoundToInt(8f * _uiScale),
+                    Mathf.RoundToInt(8f * _uiScale),
+                    Mathf.RoundToInt(5f * _uiScale),
+                    Mathf.RoundToInt(5f * _uiScale)),
+                normal = { background = MakeTexture(UiColor(35, 37, 32)), textColor = _ink },
+                hover = { background = MakeTexture(accent), textColor = _dark },
+                active = { background = MakeTexture(new Color(accent.r * 0.72f, accent.g * 0.72f, accent.b * 0.72f)), textColor = _ink },
+                focused = { background = MakeTexture(accent), textColor = _dark }
             };
+            style.onNormal.background = style.hover.background;
+            style.onNormal.textColor = _dark;
+            style.onHover.background = style.hover.background;
+            style.onHover.textColor = _dark;
+            style.onActive.background = style.active.background;
+            style.onActive.textColor = _ink;
             return style;
         }
 
@@ -553,6 +612,11 @@ namespace LastSignal
             texture.SetPixel(0, 0, color);
             texture.Apply();
             return texture;
+        }
+
+        private static Color UiColor(byte red, byte green, byte blue, byte alpha = 255)
+        {
+            return ((Color)new Color32(red, green, blue, alpha)).linear;
         }
     }
 }
