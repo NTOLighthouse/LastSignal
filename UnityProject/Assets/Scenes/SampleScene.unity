@@ -511,8 +511,8 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
-  far clip plane: 1000
+  near clip plane: 0.03
+  far clip plane: 200
   field of view: 56.5
   orthographic: 0
   orthographic size: 5
@@ -607,6 +607,9 @@ MonoBehaviour:
   smoothTime: 0.5
   centerDeadzone: 0.04
   responseCurve: 1.15
+  defaultFocusDuration: 0.75
+  defaultFocusHorizontalAngle: 6
+  defaultFocusVerticalAngle: 5
 --- !u!1 &352807342
 GameObject:
   m_ObjectHideFlags: 0
@@ -1385,6 +1388,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &832604327
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 832604328}
+  m_Layer: 0
+  m_Name: Switchboard_CameraFocusPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &832604328
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 832604327}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.5501904, y: 0.5501904, z: 0.444174, w: 0.444174}
+  m_LocalPosition: {x: -0.56148887, y: -0.00017320365, z: 0.23700029}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2478873578564704293}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &907275485
 GameObject:
   m_ObjectHideFlags: 0
@@ -1762,6 +1796,37 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
+--- !u!1 &986722495
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 986722496}
+  m_Layer: 0
+  m_Name: Logbook_InspectPose
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &986722496
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 986722495}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.05373895, y: -0.57105345, z: -0.03750217, w: 0.8182932}
+  m_LocalPosition: {x: -0.42548886, y: 0.028774738, z: 0.8790003}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7520254563445199863}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1071249343
 GameObject:
   m_ObjectHideFlags: 0
@@ -2733,6 +2798,86 @@ MonoBehaviour:
   blinkSpeed: 2
   smoothBlink: 0
   currentState: 0
+--- !u!1 &1954339410
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1954339412}
+  - component: {fileID: 1954339411}
+  m_Layer: 0
+  m_Name: BookFocus_DoF_Volume
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1954339411
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1954339410}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
+  m_IsGlobal: 1
+  priority: 10
+  blendDistance: 0
+  weight: 0
+  sharedProfile: {fileID: 11400000, guid: a6d43960feecfa4488182cac7b1c5ec1, type: 2}
+--- !u!4 &1954339412
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1954339410}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2050169658
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2050169659}
+  m_Layer: 0
+  m_Name: WallMap_CameraFocusPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2050169659
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2050169658}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0.7071068, z: -0.7071068, w: 0}
+  m_LocalPosition: {x: -0.00048885494, y: -0.87982523, z: 0.00000035762787}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7343381400924785802}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2111641837
 GameObject:
   m_ObjectHideFlags: 0
@@ -4201,6 +4346,7 @@ GameObject:
   - component: {fileID: 1337256762}
   - component: {fileID: 1337256761}
   - component: {fileID: 2478873578564704294}
+  - component: {fileID: 2478873578564704295}
   m_Layer: 0
   m_Name: Switchboard_Root.001
   m_TagString: Untagged
@@ -6067,6 +6213,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6668954506755576629}
+  - component: {fileID: 6668954506755576630}
   m_Layer: 0
   m_Name: Logbook_Root.001
   m_TagString: Untagged
@@ -6547,6 +6694,7 @@ Transform:
   - {fileID: 4025363983731565223}
   - {fileID: 7319681902508709085}
   - {fileID: 8894535172257560642}
+  - {fileID: 832604328}
   m_Father: {fileID: 7520254563445199863}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2478873578564704294
@@ -6584,6 +6732,30 @@ MonoBehaviour:
   docks:
   - {fileID: 7920459231088103865}
   - {fileID: 5830197891785841035}
+--- !u!114 &2478873578564704295
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 822465197872406651}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0f77502ae514dc4b8c3c5679b4a5212, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastSignal.SwitchboardSystem.SwitchboardCameraFocus
+  cameraLook: {fileID: 330585548}
+  interactionCamera: {fileID: 330585545}
+  interactor: {fileID: 2478873578564704294}
+  focusCameraPoint: {fileID: 832604328}
+  focusMaxHorizontalAngle: 6
+  focusMaxVerticalAngle: 5
+  raycastMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  maxRayDistance: 15
+  exitFocusOnRightClick: 1
+  exitFocusOnEscape: 1
 --- !u!4 &2488073528857494725
 Transform:
   m_ObjectHideFlags: 0
@@ -8113,6 +8285,7 @@ GameObject:
   - component: {fileID: 4554430692850848263}
   - component: {fileID: 7252938106467826573}
   - component: {fileID: 8899995991279429524}
+  - component: {fileID: 8899995991279429525}
   m_Layer: 0
   m_Name: Radio_TuningKnob.001
   m_TagString: Untagged
@@ -9212,6 +9385,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4177949907182186788}
+  - component: {fileID: 4281953179721596730}
+  - component: {fileID: 4281953179721596729}
   m_Layer: 0
   m_Name: Radio_Root.001
   m_TagString: Untagged
@@ -9219,6 +9394,143 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &4281953179721596729
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4281953179721596728}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 24303f691e759564e8f3a8d95bfb5722, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastSignal.SwitchboardSystem.RadioTunerController
+  cameraLook: {fileID: 330585548}
+  interactionCamera: {fileID: 330585545}
+  switchboardInteractor: {fileID: 2478873578564704294}
+  tuningKnob: {fileID: 4554430692850848263}
+  dialNeedle: {fileID: 7582578222655583688}
+  knobRotationAxis: {x: 1, y: 0, z: 0}
+  knobTotalRotationDegrees: 540
+  invertKnobRotation: 1
+  needleSlideLocalAxis: {x: 0, y: 1, z: 0}
+  needleMinOffset: -0.072
+  needleMaxOffset: 0.072
+  initialTuning: 0.5
+  mouseDragSensitivity: 0.0018
+  visualSmoothSpeed: 18
+  minFrequencyMHz: 3
+  maxFrequencyMHz: 12
+  holdMaxHorizontalAngle: 2
+  holdMaxVerticalAngle: 1.5
+  staticAudioSource: {fileID: 4281953179721596730}
+  customStaticClip: {fileID: 0}
+  maxStaticVolume: 0.34
+  staticFadeInSeconds: 0.24
+  staticFadeOutSeconds: 0.38
+  turnHoldGraceSeconds: 0.16
+  raycastMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  maxRayDistance: 15
+--- !u!82 &4281953179721596730
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4281953179721596728}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 0
+  m_Pitch: 1
+  Loop: 1
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0.5
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!4 &4292154238121982696
 Transform:
   m_ObjectHideFlags: 0
@@ -11755,6 +12067,7 @@ GameObject:
   - component: {fileID: 712964656524223713}
   - component: {fileID: 4068318516427030768}
   - component: {fileID: 1439087919753791013}
+  - component: {fileID: 5867085484222738236}
   m_Layer: 0
   m_Name: Switchboard_Base.001
   m_TagString: Untagged
@@ -11762,6 +12075,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!64 &5867085484222738236
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5867085484222738235}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -8698884356327122579, guid: 46cc355ae7a7ade4abafeff2a68c3e49, type: 3}
 --- !u!4 &5873763500319990420
 Transform:
   m_ObjectHideFlags: 0
@@ -12344,6 +12679,7 @@ GameObject:
   - component: {fileID: 1309519200651123791}
   - component: {fileID: 3790007618507078293}
   - component: {fileID: 5924906141642722118}
+  - component: {fileID: 6216016357295500289}
   m_Layer: 0
   m_Name: Logbook_Cover.001
   m_TagString: Untagged
@@ -12351,6 +12687,27 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!65 &6216016357295500289
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6216016357295500288}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.29, y: 0.38, z: 0.035}
+  m_Center: {x: -0.000000014901161, y: 0, z: 0.0025}
 --- !u!23 &6254298353646467788
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -13077,8 +13434,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2137610664115341142}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0.08715575, w: 0.9961947}
-  m_LocalPosition: {x: -0.3093711, y: 0.1510088, z: 0.608}
+  m_LocalRotation: {x: -0, y: -0, z: 0.08715574, w: 0.9961947}
+  m_LocalPosition: {x: -0.3093711, y: 0.15100878, z: 0.608}
   m_LocalScale: {x: 0.99999994, y: 0.99999994, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -13087,9 +13444,39 @@ Transform:
   - {fileID: 1313646079904865488}
   - {fileID: 5695355980756395057}
   - {fileID: 5171265629272081889}
-  - {fileID: 7712617375345533463}
   m_Father: {fileID: 7520254563445199863}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6668954506755576630
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2137610664115341142}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e945040b54b4cf64b81b8957e918add3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastSignal.SwitchboardSystem.BookInspectController
+  cameraLook: {fileID: 330585548}
+  interactionCamera: {fileID: 330585545}
+  switchboardInteractor: {fileID: 2478873578564704294}
+  inspectPoseTarget: {fileID: 986722496}
+  fallbackDistanceFromCamera: 0.37
+  fallbackVerticalOffset: -0.015
+  fallbackTiltDegrees: 8
+  transitionDuration: 0.65
+  liftArcHeight: 0.035
+  focusMaxHorizontalAngle: 6
+  focusMaxVerticalAngle: 5
+  backgroundBlurVolume: {fileID: 1954339411}
+  maxBlurWeight: 1
+  raycastMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  maxRayDistance: 15
+  closeOnRightClick: 1
+  closeOnEscape: 1
 --- !u!4 &6694977682417849662
 Transform:
   m_ObjectHideFlags: 0
@@ -14058,6 +14445,7 @@ GameObject:
   - component: {fileID: 5630464010971109216}
   - component: {fileID: 6550207725956256821}
   - component: {fileID: 5286488767397840179}
+  - component: {fileID: 7146222519858626776}
   m_Layer: 0
   m_Name: Switchboard_Body.001
   m_TagString: Untagged
@@ -14065,6 +14453,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!64 &7146222519858626776
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7146222519858626775}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -5222341882296923410, guid: 46cc355ae7a7ade4abafeff2a68c3e49, type: 3}
 --- !u!23 &7153848441304296694
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -14150,6 +14560,8 @@ GameObject:
   - component: {fileID: 7343381400924785802}
   - component: {fileID: 2054852715720377124}
   - component: {fileID: 388517734707778221}
+  - component: {fileID: 7343381400924785804}
+  - component: {fileID: 7343381400924785803}
   m_Layer: 0
   m_Name: WallMap_Board.001
   m_TagString: Untagged
@@ -14400,9 +14812,56 @@ Transform:
   m_LocalPosition: {x: -0.04, y: 1.532, z: 1.24}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 2050169659}
   m_Father: {fileID: 7520254563445199863}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7343381400924785803
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7242842230651714345}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0fc68fa5f7d725b4e8083d2de6c03669, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastSignal.SwitchboardSystem.MapCameraFocus
+  cameraLook: {fileID: 330585548}
+  interactionCamera: {fileID: 330585545}
+  switchboardInteractor: {fileID: 2478873578564704294}
+  focusCameraPoint: {fileID: 2050169659}
+  focusDurationSeconds: 1
+  focusMaxHorizontalAngle: 6
+  focusMaxVerticalAngle: 5
+  raycastMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  maxRayDistance: 15
+  exitFocusOnRightClick: 1
+  exitFocusOnEscape: 1
+--- !u!65 &7343381400924785804
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7242842230651714345}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.9, y: 0.031999998, z: 0.74}
+  m_Center: {x: 0, y: 0.0019999994, z: 0}
 --- !u!4 &7385827027386695039
 Transform:
   m_ObjectHideFlags: 0
@@ -14693,6 +15152,8 @@ Transform:
   - {fileID: 7114126858214782738}
   - {fileID: 7343381400924785802}
   - {fileID: 1629679881644720421}
+  - {fileID: 7712617375345533463}
+  - {fileID: 986722496}
   m_Father: {fileID: 543450652208916395}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &7536666904897233780
@@ -15073,12 +15534,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6699107278011670855}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0.15643446, w: 0.98768836}
-  m_LocalPosition: {x: -0.014999986, y: 0.195, z: 0.003799975}
-  m_LocalScale: {x: 1.0000001, y: 1.0000001, z: 1}
+  m_LocalRotation: {x: -0, y: -0, z: 0.2419219, w: 0.9702958}
+  m_LocalPosition: {x: -0.35800457, y: 0.34044158, z: 0.61179996}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 6668954506755576629}
+  m_Father: {fileID: 7520254563445199863}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &7714222777283354323
 MeshFilter:
@@ -17454,6 +17915,27 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!65 &8899995991279429525
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3617383051056966026}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.04, y: 0.068, z: 0.068}
+  m_Center: {x: -0.011875, y: 0, z: 0}
 --- !u!23 &8914553207075700556
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -17953,3 +18435,4 @@ SceneRoots:
   - {fileID: 147440464}
   - {fileID: 6958801397108071417}
   - {fileID: 954596293181052691}
+  - {fileID: 1954339412}

@@ -85,7 +85,7 @@ namespace LastSignal
             }
         }
 
-        [SerializeField] private bool showOverlay = true;
+        [SerializeField] private bool showOverlay = false;
 
         // Главная точка отрисовки: выбирает нужный экран и масштабирует интерфейс.
         private void OnGUI()

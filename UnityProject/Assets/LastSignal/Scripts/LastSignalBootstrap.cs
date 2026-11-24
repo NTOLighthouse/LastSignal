@@ -4,7 +4,8 @@ namespace LastSignal
 {
     public static class LastSignalBootstrap
     {
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        // Отключено, чтобы скриптовый 2D-UI не перекрывал 3D-сцену коммутатора.
+        // [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void CreateGame()
         {
             if (Object.FindAnyObjectByType<LastSignalGame>() != null)

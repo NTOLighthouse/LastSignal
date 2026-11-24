@@ -20,7 +20,45 @@ namespace LastSignal
         [SerializeField, Range(0f, 0.25f)] private float centerDeadzone = 0.04f;
         [SerializeField, Range(1f, 2.5f)] private float responseCurve = 1.15f;
 
-        private Quaternion _baseLocalRotation;
+        [Header("Плавный фокус на объекте")]
+        [Tooltip("Длительность плавного перелёта камеры по S-кривой (в секундах).")]
+        [SerializeField, Min(0.1f)] private float defaultFocusDuration = 0.75f;
+        [SerializeField, Range(0f, 30f)] private float defaultFocusHorizontalAngle = 6f;
+        [SerializeField, Range(0f, 30f)] private float defaultFocusVerticalAngle = 5f;
+
+        private Vector3 _defaultWorldPosition;
+        private Quaternion _defaultWorldRotation;
+
+        private Vector3 _currentBasePosition;
+        private Quaternion _currentBaseRotation;
+
+        private Vector3 _transitionStartPosition;
+        private Quaternion _transitionStartRotation;
+        private float _transitionStartMaxH;
+        private float _transitionStartMaxV;
+
+        private Vector3 _transitionTargetPosition;
+        private Quaternion _transitionTargetRotation;
+        private float _transitionTargetMaxH;
+        private float _transitionTargetMaxV;
+
+        private float _transitionProgress = 1f;
+        private float _transitionDuration = 0.75f;
+
+        private bool _isFocused;
+        private object _currentFocusOwner;
+
+        private bool _isLookHoldActive;
+        private object _lookHoldOwner;
+        private float _holdCenterYaw;
+        private float _holdCenterPitch;
+        private float _holdHalfRangeH;
+        private float _holdHalfRangeV;
+        private Vector2 _holdAnchorNormalizedMouse;
+
+        private float _activeMaxHorizontalAngle;
+        private float _activeMaxVerticalAngle;
+
         private float _currentYaw;
         private float _currentPitch;
         private float _yawVelocity;
@@ -28,9 +66,34 @@ namespace LastSignal
         private float _targetYaw;
         private float _targetPitch;
 
+        public bool IsFocused => _isFocused;
+        public object CurrentFocusOwner => _currentFocusOwner;
+        public Vector3 DefaultWorldPosition => _defaultWorldPosition;
+        public Quaternion DefaultWorldRotation => _defaultWorldRotation;
+
+        /// <summary>Срабатывает при смене владельца фокуса камеры (null = возврат к общему обзору).</summary>
+        public event System.Action<object> OnFocusOwnerChanged;
+
         private void Awake()
         {
-            _baseLocalRotation = transform.localRotation;
+            _defaultWorldPosition = transform.position;
+            _defaultWorldRotation = transform.rotation;
+
+            _currentBasePosition = _defaultWorldPosition;
+            _currentBaseRotation = _defaultWorldRotation;
+
+            _transitionStartPosition = _defaultWorldPosition;
+            _transitionStartRotation = _defaultWorldRotation;
+            _transitionTargetPosition = _defaultWorldPosition;
+            _transitionTargetRotation = _defaultWorldRotation;
+
+            _activeMaxHorizontalAngle = maxHorizontalAngle;
+            _activeMaxVerticalAngle = maxVerticalAngle;
+            _transitionStartMaxH = maxHorizontalAngle;
+            _transitionStartMaxV = maxVerticalAngle;
+            _transitionTargetMaxH = maxHorizontalAngle;
+            _transitionTargetMaxV = maxVerticalAngle;
+            _transitionProgress = 1f;
         }
 
         private void OnEnable()
@@ -41,19 +104,173 @@ namespace LastSignal
             _pitchVelocity = 0f;
         }
 
-        private void LateUpdate()
+        /// <summary>
+        /// Плавно (по S-кривой без рывков) приближает и фиксирует камеру на указанной точке.
+        /// </summary>
+        public void FocusOn(
+            Vector3 targetWorldPosition,
+            Quaternion targetWorldRotation,
+            float? maxHorizontal = null,
+            float? maxVertical = null,
+            object owner = null,
+            float? durationSeconds = null)
         {
+            _isLookHoldActive = false;
+            _lookHoldOwner = null;
+
+            bool ownerChanged = !_isFocused || !ReferenceEquals(_currentFocusOwner, owner);
+            _isFocused = true;
+            _currentFocusOwner = owner;
+
+            float targetH = maxHorizontal ?? defaultFocusHorizontalAngle;
+            float targetV = maxVertical ?? defaultFocusVerticalAngle;
+            float dur = durationSeconds ?? defaultFocusDuration;
+
+            BeginSmoothTransition(targetWorldPosition, targetWorldRotation, targetH, targetV, dur);
+
+            if (ownerChanged)
+            {
+                OnFocusOwnerChanged?.Invoke(_currentFocusOwner);
+            }
+        }
+
+        /// <summary>
+        /// Нативно ограничивает поворот камеры вокруг её ТЕКУЩЕГО угла взгляда без изменения базовой позы.
+        /// После вызова EndLookHold камера продолжает обзор ровно с текущего угла без каких-либо перелётов.
+        /// </summary>
+        public void BeginLookHold(float maxHorizontalOffset = 2f, float maxVerticalOffset = 1.5f, object owner = null)
+        {
+            _isLookHoldActive = true;
+            _lookHoldOwner = owner;
+            _holdCenterYaw = _currentYaw;
+            _holdCenterPitch = _currentPitch;
+            _holdHalfRangeH = Mathf.Max(0f, maxHorizontalOffset);
+            _holdHalfRangeV = Mathf.Max(0f, maxVerticalOffset);
+
             if (TryReadNormalizedMouse(out Vector2 normalized))
             {
-                float nx = ApplyDeadzoneAndCurve(normalized.x);
-                float ny = ApplyDeadzoneAndCurve(normalized.y);
+                _holdAnchorNormalizedMouse = normalized;
+            }
+            else
+            {
+                _holdAnchorNormalizedMouse = Vector2.zero;
+            }
+        }
 
-                _targetYaw = Mathf.Clamp(nx * maxHorizontalAngle, -maxHorizontalAngle, maxHorizontalAngle);
-                // В Unity поворот вокруг локальной оси X в минус поднимает камеру вверх.
-                _targetPitch = Mathf.Clamp(-ny * maxVerticalAngle, -maxVerticalAngle, maxVerticalAngle);
+        /// <summary>
+        /// Снимает локальное ограничение угла взгляда, оставляя камеру ровно там, куда она смотрит.
+        /// </summary>
+        public void EndLookHold(object owner = null)
+        {
+            if (!_isLookHoldActive)
+            {
+                return;
             }
 
+            if (owner != null && !ReferenceEquals(_lookHoldOwner, owner))
+            {
+                return;
+            }
+
+            _isLookHoldActive = false;
+            _lookHoldOwner = null;
+        }
+
+        /// <summary>
+        /// Плавно возвращает камеру в исходную позицию и обычные лимиты обзора.
+        /// Если передан owner — снимает фокус только если он сейчас принадлежит этому owner.
+        /// </summary>
+        public void ClearFocus(object owner = null, float? durationSeconds = null)
+        {
+            if (!_isFocused)
+            {
+                return;
+            }
+
+            if (owner != null && !ReferenceEquals(_currentFocusOwner, owner))
+            {
+                return;
+            }
+
+            _isFocused = false;
+            _currentFocusOwner = null;
+
+            float dur = durationSeconds ?? defaultFocusDuration;
+            BeginSmoothTransition(_defaultWorldPosition, _defaultWorldRotation, maxHorizontalAngle, maxVerticalAngle, dur);
+
+            OnFocusOwnerChanged?.Invoke(null);
+        }
+
+        private void BeginSmoothTransition(
+            Vector3 targetPos,
+            Quaternion targetRot,
+            float targetMaxH,
+            float targetMaxV,
+            float durationSeconds)
+        {
+            // Впекаем текущий визуальный поворот камеры (включая смещение от мыши) в стартовую точку,
+            // чтобы при смене лимитов (например 40° -> 6°) не было ни малейшего скачка!
+            _transitionStartPosition = transform.position;
+            _transitionStartRotation = transform.rotation;
+            _transitionStartMaxH = _activeMaxHorizontalAngle;
+            _transitionStartMaxV = _activeMaxVerticalAngle;
+
+            _transitionTargetPosition = targetPos;
+            _transitionTargetRotation = targetRot;
+            _transitionTargetMaxH = targetMaxH;
+            _transitionTargetMaxV = targetMaxV;
+
+            _currentYaw = 0f;
+            _currentPitch = 0f;
+            _targetYaw = 0f;
+            _targetPitch = 0f;
+            _yawVelocity = 0f;
+            _pitchVelocity = 0f;
+
+            _transitionDuration = Mathf.Max(0.1f, durationSeconds);
+            _transitionProgress = 0f;
+        }
+
+        private void LateUpdate()
+        {
             float dt = Time.unscaledDeltaTime;
+
+            if (_transitionProgress < 1f && dt > 0f)
+            {
+                _transitionProgress = Mathf.MoveTowards(_transitionProgress, 1f, dt / _transitionDuration);
+                float s = SmootherStep(_transitionProgress);
+
+                _currentBasePosition = Vector3.Lerp(_transitionStartPosition, _transitionTargetPosition, s);
+                _currentBaseRotation = Quaternion.Slerp(_transitionStartRotation, _transitionTargetRotation, s);
+                _activeMaxHorizontalAngle = Mathf.Lerp(_transitionStartMaxH, _transitionTargetMaxH, s);
+                _activeMaxVerticalAngle = Mathf.Lerp(_transitionStartMaxV, _transitionTargetMaxV, s);
+            }
+
+            // Во время активного перелёта мягко включаем слежение за мышью ближе к концу траектории,
+            // чтобы взгляд идеально плавно переходил в интерактивный режим.
+            float lookBlend = _transitionProgress < 1f ? SmootherStep(Mathf.InverseLerp(0.35f, 1f, _transitionProgress)) : 1f;
+
+            if (TryReadNormalizedMouse(out Vector2 normalized))
+            {
+                if (_isLookHoldActive)
+                {
+                    Vector2 delta = normalized - _holdAnchorNormalizedMouse;
+                    float offsetYaw = Mathf.Clamp(delta.x * _holdHalfRangeH * 2f, -_holdHalfRangeH, _holdHalfRangeH);
+                    float offsetPitch = Mathf.Clamp(-delta.y * _holdHalfRangeV * 2f, -_holdHalfRangeV, _holdHalfRangeV);
+                    _targetYaw = Mathf.Clamp(_holdCenterYaw + offsetYaw, -_activeMaxHorizontalAngle, _activeMaxHorizontalAngle);
+                    _targetPitch = Mathf.Clamp(_holdCenterPitch + offsetPitch, -_activeMaxVerticalAngle, _activeMaxVerticalAngle);
+                }
+                else
+                {
+                    float nx = ApplyDeadzoneAndCurve(normalized.x);
+                    float ny = ApplyDeadzoneAndCurve(normalized.y);
+
+                    _targetYaw = Mathf.Clamp(nx * _activeMaxHorizontalAngle, -_activeMaxHorizontalAngle, _activeMaxHorizontalAngle) * lookBlend;
+                    // В Unity поворот вокруг локальной оси X в минус поднимает камеру вверх.
+                    _targetPitch = Mathf.Clamp(-ny * _activeMaxVerticalAngle, -_activeMaxVerticalAngle, _activeMaxVerticalAngle) * lookBlend;
+                }
+            }
+
             if (dt > 0f)
             {
                 _currentYaw = Mathf.SmoothDamp(_currentYaw, _targetYaw, ref _yawVelocity, smoothTime, Mathf.Infinity, dt);
@@ -61,10 +278,17 @@ namespace LastSignal
             }
 
             // Жёсткое ограничение после сглаживания гарантирует, что камера никогда не выйдет за лимиты.
-            _currentYaw = Mathf.Clamp(_currentYaw, -maxHorizontalAngle, maxHorizontalAngle);
-            _currentPitch = Mathf.Clamp(_currentPitch, -maxVerticalAngle, maxVerticalAngle);
+            _currentYaw = Mathf.Clamp(_currentYaw, -_activeMaxHorizontalAngle, _activeMaxHorizontalAngle);
+            _currentPitch = Mathf.Clamp(_currentPitch, -_activeMaxVerticalAngle, _activeMaxVerticalAngle);
 
-            transform.localRotation = _baseLocalRotation * Quaternion.Euler(_currentPitch, _currentYaw, 0f);
+            transform.position = _currentBasePosition;
+            transform.rotation = _currentBaseRotation * Quaternion.Euler(_currentPitch, _currentYaw, 0f);
+        }
+
+        private static float SmootherStep(float t)
+        {
+            t = Mathf.Clamp01(t);
+            return t * t * t * (t * (t * 6f - 15f) + 10f);
         }
 
         private float ApplyDeadzoneAndCurve(float value)
