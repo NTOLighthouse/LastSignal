@@ -198,7 +198,8 @@ namespace LastSignal.SwitchboardSystem
                 transform.position = pos;
                 transform.rotation = Quaternion.Slerp(_tableRotation, _inspectRotation, s);
 
-                if (backgroundBlurVolume != null)
+                if (backgroundBlurVolume != null &&
+                    (cameraLook == null || cameraLook.CurrentFocusOwner == null || ReferenceEquals(cameraLook.CurrentFocusOwner, this)))
                 {
                     backgroundBlurVolume.weight = s * maxBlurWeight;
                 }

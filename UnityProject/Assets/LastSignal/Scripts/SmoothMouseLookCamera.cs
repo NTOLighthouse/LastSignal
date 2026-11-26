@@ -98,8 +98,6 @@ namespace LastSignal
 
         private void OnEnable()
         {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
             _yawVelocity = 0f;
             _pitchVelocity = 0f;
         }
