@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -39,6 +40,12 @@ namespace LastSignal.SwitchboardSystem
 
         public SwitchboardPlug ActivePlug { get; private set; }
 
+        /// <summary>Срабатывает при физическом подключении штекера в порт (передаёт portId 1..10).</summary>
+        public event Action<int> OnPortConnected;
+
+        /// <summary>Срабатывает при физическом выдёргивании штекера из порта (передаёт portId 1..10).</summary>
+        public event Action<int> OnPortDisconnected;
+
         private void Awake()
         {
             if (switchboardController == null)
@@ -61,6 +68,12 @@ namespace LastSignal.SwitchboardSystem
 
         private void Update()
         {
+            if (GameplayInputGate.IsBlocked)
+            {
+                ClearHoverHighlight();
+                return;
+            }
+
             UpdateHoverAndCarryMovement();
 
             if (WasRightMousePressed())
@@ -70,6 +83,11 @@ namespace LastSignal.SwitchboardSystem
             }
 
             if (!WasLeftMousePressed(out Vector2 mousePosition))
+            {
+                return;
+            }
+
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
                 return;
             }
@@ -144,6 +162,7 @@ namespace LastSignal.SwitchboardSystem
                 int disconnectedPortId = clickedPlug.CurrentPort.PortId;
                 clickedPlug.PickUp();
                 switchboardController?.OnPlugDisconnected(disconnectedPortId);
+                OnPortDisconnected?.Invoke(disconnectedPortId);
             }
             else
             {
@@ -167,6 +186,7 @@ namespace LastSignal.SwitchboardSystem
             ClearHoverHighlight();
             plugToInsert.MoveToPort(clickedPort);
             switchboardController?.OnPlugConnected(clickedPort.PortId);
+            OnPortConnected?.Invoke(clickedPort.PortId);
         }
 
         private void ReturnActivePlugHome()

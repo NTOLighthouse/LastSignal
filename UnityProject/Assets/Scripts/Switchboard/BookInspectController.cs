@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -106,7 +107,7 @@ namespace LastSignal.SwitchboardSystem
         {
             UpdateBookMotionAndBlur();
 
-            if (cameraLook == null)
+            if (cameraLook == null || GameplayInputGate.IsBlocked)
             {
                 return;
             }
@@ -128,7 +129,9 @@ namespace LastSignal.SwitchboardSystem
                 return;
             }
 
-            if (WasLeftMousePressed(out Vector2 mousePos) && IsClickOnBook(mousePos))
+            if (WasLeftMousePressed(out Vector2 mousePos) &&
+                !(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) &&
+                IsClickOnBook(mousePos))
             {
                 PickUpBook();
             }

@@ -48,7 +48,7 @@ namespace LastSignal.SwitchboardSystem
 
         private void Update()
         {
-            if (cameraLook == null)
+            if (cameraLook == null || GameplayInputGate.IsBlocked)
             {
                 return;
             }

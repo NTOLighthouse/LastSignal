@@ -40,7 +40,7 @@ namespace LastSignal.SwitchboardSystem
         [SerializeField] private Texture2D basePageTexture;
 
         [Header("Параметры появления заметок")]
-        [SerializeField, Min(0.4f)] private float writeDurationPerNote = 1.35f;
+        [SerializeField, Min(0.4f)] private float writeDurationPerNote = 1.65f;
 
         [Header("Начальные заметки (опционально, видны сразу)")]
         [SerializeField] private List<string> initialInstantNotes = new List<string>();
@@ -68,6 +68,13 @@ namespace LastSignal.SwitchboardSystem
         private int _nextPresetIndex;
 
         public int NoteCount => _notes.Count;
+        public Texture PageTexture => _pageRenderTexture;
+
+        /// <summary>
+        /// Опциональный хук подготовки книги перед началом письма карандашом (например, автоперелистывание на Разворот I).
+        /// Если обработчик вернул true — он сам вызовет переданный callback после завершения перелистывания.
+        /// </summary>
+        public Func<Action, bool> OnBeforeStartWrite;
 
         private void Awake()
         {
@@ -210,6 +217,34 @@ namespace LastSignal.SwitchboardSystem
                 return;
             }
 
+            // Если книга сейчас открыта на другом развороте — плавно перелистываем на Разворот I перед началом письма.
+            if (OnBeforeStartWrite != null)
+            {
+                _isWritingFromQueue = true;
+                bool deferred = OnBeforeStartWrite.Invoke(() =>
+                {
+                    _isWritingFromQueue = false;
+                    StartNextQueuedNoteImmediate();
+                });
+
+                if (deferred)
+                {
+                    return;
+                }
+
+                _isWritingFromQueue = false;
+            }
+
+            StartNextQueuedNoteImmediate();
+        }
+
+        private void StartNextQueuedNoteImmediate()
+        {
+            if (_isWritingFromQueue || _pendingNoteQueue.Count == 0)
+            {
+                return;
+            }
+
             string text = _pendingNoteQueue.Dequeue();
             int rowIndex = _notes.Count;
             NoteEntry entry = CreateNoteEntry(text, 0f);
@@ -317,14 +352,14 @@ namespace LastSignal.SwitchboardSystem
             float localYStart = Mathf.Lerp(0.002f, 0.156f, 0.11f);
             float localYEnd = Mathf.Lerp(0.002f, 0.156f, 0.86f);
 
-            // Поверхность изогнутой страницы: около корешка z ≈ 0.015, ближе к внешнему краю z ≈ 0.026.
-            localStart = new Vector3(localX, localYStart, 0.019f);
-            localEnd = new Vector3(localX, localYEnd, 0.026f);
+            // Точная кривая поверхности Logbook_Page_Right.001 из замеренного профиля меша.
+            localStart = new Vector3(localX, localYStart, LogbookPencilAnimator.SampleCurvedPageSurfaceZ(localYStart));
+            localEnd = new Vector3(localX, localYEnd, LogbookPencilAnimator.SampleCurvedPageSurfaceZ(localYEnd));
         }
 
         private void BuildOffscreenCanvas()
         {
-            _pageRenderTexture = new RenderTexture(TexWidth, TexHeight, 0, RenderTextureFormat.ARGB32)
+            _pageRenderTexture = new RenderTexture(TexWidth, TexHeight, 16, RenderTextureFormat.ARGB32)
             {
                 name = "RT_Logbook_RightPage",
                 filterMode = FilterMode.Trilinear,

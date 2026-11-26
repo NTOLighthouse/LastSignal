@@ -6,23 +6,35 @@ namespace LastSignal.SwitchboardSystem
 {
     /// <summary>
     /// Аниматор карандаша журнала (Logbook_Pencil.001):
-    /// плавно поднимает карандаш со стола, водит кончиком грифеля по нужной строке правой страницы
-    /// синхронно с проявлением заметки и звуком карандаша по бумаге, затем кладёт карандаш обратно на стол.
+    /// плавно поднимает карандаш со стола по дуге Безье, касается кончиком грифеля точно по кривой
+    /// поверхности правой страницы (без проваливания под книгу/стол), выводит мягкие рукописные штрихи
+    /// синхронно с проявлением текста и звуком графита, затем аккуратно кладёт карандаш обратно на стол.
     /// </summary>
     public sealed class LogbookPencilAnimator : MonoBehaviour
     {
-        [Header("Геометрия карандаша")]
-        [Tooltip("Локальное смещение кончика грифеля (для модели Logbook_Pencil.001 это -X = -0.081 м).")]
-        [SerializeField] private Vector3 localTipOffset = new Vector3(-0.081f, 0f, 0f);
+        // Точный замеренный профиль кривизны Logbook_Page_Right.001 (y = 0.0020 .. 0.1560 -> z поверхности).
+        private static readonly float[] PageCurveZ =
+        {
+            0.00740f, 0.01012f, 0.01276f, 0.01527f, 0.01762f,
+            0.01978f, 0.02170f, 0.02336f, 0.02472f, 0.02578f,
+            0.02651f, 0.02691f, 0.02697f, 0.02669f, 0.02609f,
+            0.02517f, 0.02396f
+        };
 
-        [Header("Параметры анимации письма")]
-        [SerializeField, Min(0.05f)] private float liftDuration = 0.28f;
-        [SerializeField, Min(0.05f)] private float returnDuration = 0.34f;
-        [SerializeField, Min(0f)] private float transitArcHeight = 0.065f;
-        [SerializeField, Range(15f, 75f)] private float writingTiltDegrees = 46f;
-        [SerializeField, Min(0f)] private float scribbleAmplitudeX = 0.0055f;
-        [SerializeField, Min(0f)] private float scribbleAmplitudeY = 0.0038f;
-        [SerializeField, Min(1f)] private float scribbleFrequency = 34f;
+        [Header("Геометрия карандаша")]
+        [Tooltip("Локальное смещение острого кончика грифеля (для Logbook_Pencil.001 это -X = -0.081 м).")]
+        [SerializeField] private Vector3 localTipOffset = new Vector3(-0.081f, 0f, 0f);
+        [Tooltip("Минимальный зазор кончика грифеля над поверхностью страницы, чтобы исключить клиппинг.")]
+        [SerializeField, Min(0f)] private float surfaceClearanceMeters = 0.0018f;
+
+        [Header("Плавная хореография письма (12 принципов анимации)")]
+        [SerializeField, Min(0.15f)] private float liftDuration = 0.48f;
+        [SerializeField, Min(0.15f)] private float returnDuration = 0.52f;
+        [SerializeField, Min(0.02f)] private float transitArcHeight = 0.085f;
+        [SerializeField, Range(25f, 70f)] private float writingTiltDegrees = 44f;
+        [SerializeField, Range(0f, 0.006f)] private float cursiveAmplitudeVertical = 0.0026f;
+        [SerializeField, Range(0f, 0.004f)] private float cursiveAmplitudeHorizontal = 0.0016f;
+        [SerializeField, Range(4f, 22f)] private float cursiveFrequency = 13.5f;
 
         [Header("Звук карандаша по бумаге")]
         [SerializeField] private AudioSource pencilAudioSource;
@@ -58,8 +70,18 @@ namespace LastSignal.SwitchboardSystem
         }
 
         /// <summary>
-        /// Проигрывает короткий штрих карандаша (например, при клике по строке позывного на левой странице).
+        /// Возвращает точную локальную Z-координату изогнутой поверхности страницы журнала по локальной Y (0.002..0.156).
         /// </summary>
+        public static float SampleCurvedPageSurfaceZ(float localYAbs)
+        {
+            float t = Mathf.InverseLerp(0.0020f, 0.1560f, Mathf.Abs(localYAbs));
+            float scaled = t * (PageCurveZ.Length - 1);
+            int idx0 = Mathf.Clamp(Mathf.FloorToInt(scaled), 0, PageCurveZ.Length - 1);
+            int idx1 = Mathf.Clamp(idx0 + 1, 0, PageCurveZ.Length - 1);
+            float frac = scaled - idx0;
+            return Mathf.Lerp(PageCurveZ[idx0], PageCurveZ[idx1], frac);
+        }
+
         public void PlayShortScratchSound()
         {
             EnsureAudioSource();
@@ -75,15 +97,6 @@ namespace LastSignal.SwitchboardSystem
             pencilAudioSource.PlayOneShot(clip, shortTickVolume);
         }
 
-        /// <summary>
-        /// Запускает полную анимацию: подъём карандаша -> письмо по указанной строке страницы со звуком -> возврат на стол.
-        /// </summary>
-        /// <param name="pageTransform">Трансформ правой страницы (Logbook_Page_Right.001).</param>
-        /// <param name="localStartOnPage">Локальная точка начала строки на странице.</param>
-        /// <param name="localEndOnPage">Локальная точка конца строки на странице.</param>
-        /// <param name="writeDurationSeconds">Длительность вождения по странице.</param>
-        /// <param name="onWriteProgress">Коллбэк прогресса письма 0..1 (для плавного проявления текста).</param>
-        /// <param name="onCompleted">Коллбэк после полного возврата карандаша на стол.</param>
         public void PlayWriteAnimation(
             Transform pageTransform,
             Vector3 localStartOnPage,
@@ -111,7 +124,7 @@ namespace LastSignal.SwitchboardSystem
                 pageTransform,
                 localStartOnPage,
                 localEndOnPage,
-                Mathf.Max(0.35f, writeDurationSeconds),
+                Mathf.Max(0.6f, writeDurationSeconds),
                 onWriteProgress,
                 onCompleted));
         }
@@ -129,62 +142,67 @@ namespace LastSignal.SwitchboardSystem
             Vector3 startPos = transform.position;
             Quaternion startRot = transform.rotation;
 
-            // Фаза 1: Плавно поднимаем карандаш со стола и подводим острие к началу строки.
+            // Фаза 1: Плавный подъём карандаша со стола по дуге Безье к началу строки.
             float elapsed = 0f;
             while (elapsed < liftDuration)
             {
                 elapsed += Time.unscaledDeltaTime;
-                float s = SmootherStep(elapsed / liftDuration);
+                float p = SmootherStep(elapsed / liftDuration);
 
-                ComputePencilPoseOnPage(pageTransform, localStart, 0f, out Vector3 targetPos, out Quaternion targetRot);
-                Vector3 pos = Vector3.Lerp(startPos, targetPos, s);
-                pos += pageTransform.forward * (Mathf.Sin(s * Mathf.PI) * transitArcHeight);
+                Vector3 startPointOnSurface = ClampLocalPointToSurface(localStart);
+                ComputePencilPoseOnPage(pageTransform, startPointOnSurface, 0f, 0f, out Vector3 targetPos, out Quaternion targetRot);
 
-                transform.position = pos;
-                transform.rotation = Quaternion.Slerp(startRot, targetRot, s);
+                Vector3 liftUpDir = (Vector3.up + pageTransform.forward).normalized;
+                Vector3 ctrl = Vector3.Lerp(startPos, targetPos, 0.52f) + liftUpDir * transitArcHeight;
+                transform.position = EvalQuadraticBezier(startPos, ctrl, targetPos, p);
+                transform.rotation = Quaternion.Slerp(startRot, targetRot, p);
                 yield return null;
             }
 
-            // Фаза 2: Карандаш водит по строке с живым письмом и звуком грифеля по бумаге.
+            // Фаза 2: Плавное рукописное ведение грифеля по кривой поверхности страницы.
             PlayWritingScratchSound(writeDuration);
 
             elapsed = 0f;
             while (elapsed < writeDuration)
             {
                 elapsed += Time.unscaledDeltaTime;
-                float u = Mathf.Clamp01(elapsed / writeDuration);
+                float uRaw = Mathf.Clamp01(elapsed / writeDuration);
+                float uMove = Mathf.Lerp(uRaw, SmootherStep(uRaw), 0.35f);
 
-                Vector3 localLinePoint = Vector3.Lerp(localStart, localEnd, u);
-                // Живые мелкие рукописные штрихи в плоскости страницы.
-                float scribbleX = Mathf.Sin(elapsed * scribbleFrequency) * scribbleAmplitudeX;
-                float scribbleY = Mathf.Cos(elapsed * scribbleFrequency * 0.68f) * scribbleAmplitudeY;
-                localLinePoint.x += scribbleX;
-                localLinePoint.y += scribbleY;
+                // Мягкое нарастание и затухание рукописных колебаний у начала и конца строки (без рывков).
+                float strokeEnv = Mathf.Clamp01(uRaw * 7f) * Mathf.Clamp01((1f - uRaw) * 7f);
 
-                ComputePencilPoseOnPage(pageTransform, localLinePoint, elapsed, out Vector3 penPos, out Quaternion penRot);
+                Vector3 localPt = Vector3.Lerp(localStart, localEnd, uMove);
+                localPt.x += Mathf.Sin(elapsed * cursiveFrequency) * cursiveAmplitudeVertical * strokeEnv;
+                localPt.y += Mathf.Cos(elapsed * cursiveFrequency * 0.72f) * cursiveAmplitudeHorizontal * strokeEnv;
+                localPt = ClampLocalPointToSurface(localPt);
+
+                // Лёгкий подъём острия в самые последние 8% (естественный отрыв руки от бумаги).
+                float liftOff = Mathf.InverseLerp(0.92f, 1.0f, uRaw) * 0.008f;
+                localPt.z += liftOff;
+
+                ComputePencilPoseOnPage(pageTransform, localPt, elapsed, strokeEnv, out Vector3 penPos, out Quaternion penRot);
                 transform.position = penPos;
                 transform.rotation = penRot;
 
-                onWriteProgress?.Invoke(u);
+                onWriteProgress?.Invoke(uRaw);
                 yield return null;
             }
 
             onWriteProgress?.Invoke(1f);
 
-            // Фаза 3: Плавно возвращаем карандаш обратно на его исходное место на столе.
+            // Фаза 3: Плавный возврат карандаша по дуге Безье на исходное место на столе.
             Vector3 leavePos = transform.position;
             Quaternion leaveRot = transform.rotation;
             elapsed = 0f;
             while (elapsed < returnDuration)
             {
                 elapsed += Time.unscaledDeltaTime;
-                float s = SmootherStep(elapsed / returnDuration);
+                float p = SmootherStep(elapsed / returnDuration);
 
-                Vector3 pos = Vector3.Lerp(leavePos, _restWorldPosition, s);
-                pos.y += Mathf.Sin(s * Mathf.PI) * transitArcHeight;
-
-                transform.position = pos;
-                transform.rotation = Quaternion.Slerp(leaveRot, _restWorldRotation, s);
+                Vector3 ctrl = Vector3.Lerp(leavePos, _restWorldPosition, 0.45f) + Vector3.up * transitArcHeight;
+                transform.position = EvalQuadraticBezier(leavePos, ctrl, _restWorldPosition, p);
+                transform.rotation = Quaternion.Slerp(leaveRot, _restWorldRotation, p);
                 yield return null;
             }
 
@@ -196,40 +214,49 @@ namespace LastSignal.SwitchboardSystem
             onCompleted?.Invoke();
         }
 
+        private Vector3 ClampLocalPointToSurface(Vector3 localPointOnPage)
+        {
+            localPointOnPage.z = SampleCurvedPageSurfaceZ(localPointOnPage.y) + surfaceClearanceMeters;
+            return localPointOnPage;
+        }
+
         private void ComputePencilPoseOnPage(
             Transform pageTransform,
             Vector3 localTipOnPage,
             float scribbleTime,
+            float strokeEnv,
             out Vector3 worldPos,
             out Quaternion worldRot)
         {
-            // Для Logbook_Page_Right.001: +forward = нормаль страницы наружу, +up = вправо, +right = вверх по странице.
+            // Для Logbook_Page_Right.001:
+            // +forward = нормаль страницы наружу (вверх от бумаги),
+            // +up      = слева направо по строке (от корешка к правому краю),
+            // +right   = снизу вверх вдоль страницы.
             Vector3 tipWorld = pageTransform.TransformPoint(localTipOnPage);
             Vector3 pageNormal = pageTransform.forward.normalized;
             Vector3 pageRight = pageTransform.up.normalized;
             Vector3 pageDown = -pageTransform.right.normalized;
 
-            // Ось карандаша (+X, от грифеля к ластику) наклонена от поверхности страницы вправо-вниз (как в правой руке).
+            // Вектор от острия (-X) к ластику (+X): вверх от бумаги под углом writingTiltDegrees и вправо-вниз (как в правой руке).
             float tiltRad = writingTiltDegrees * Mathf.Deg2Rad;
-            float wobble = Mathf.Sin(scribbleTime * 19f) * 0.04f;
-            Vector3 sideDir = (pageRight * 0.72f + pageDown * 0.69f).normalized;
-            Vector3 pencilAxis = (pageNormal * Mathf.Sin(tiltRad) + sideDir * Mathf.Cos(tiltRad) + pageRight * wobble).normalized;
+            float sway = Mathf.Sin(scribbleTime * 8.5f) * 0.035f * strokeEnv;
+            Vector3 sideDir = (pageRight * 0.68f + pageDown * 0.73f).normalized;
+            Vector3 pencilAxis = (pageNormal * Mathf.Sin(tiltRad) + sideDir * Mathf.Cos(tiltRad) + pageRight * sway).normalized;
 
-            // Поворачиваем так, чтобы локальный +X карандаша совпал с pencilAxis.
+            // В левосторонней СК Unity: Quaternion.LookRotation(fwd, up) задаёт local +X = Cross(up, fwd).
+            // Берём orthoUp = Cross(pageNormal, pencilAxis) и orthoFwd = Cross(pencilAxis, orthoUp).
+            // Тогда Cross(orthoUp, orthoFwd) == +pencilAxis -> кончик (-X) точно направлен в бумагу, тело (+X) строго над бумагой!
             Vector3 orthoUp = Vector3.Cross(pageNormal, pencilAxis);
             if (orthoUp.sqrMagnitude < 0.0001f)
             {
-                orthoUp = Vector3.up;
+                orthoUp = pageRight;
             }
             orthoUp.Normalize();
             Vector3 orthoFwd = Vector3.Cross(pencilAxis, orthoUp).normalized;
 
-            // Базис: right = pencilAxis, up = orthoUp, forward = orthoFwd.
-            // В Quaternion.LookRotation(fwd, up): local +Z = fwd, local +Y = up, local +X = cross(up, fwd).
-            // Нам нужно cross(up, fwd) == pencilAxis -> up = orthoUp, fwd = -orthoFwd.
-            worldRot = Quaternion.LookRotation(-orthoFwd, orthoUp);
+            worldRot = Quaternion.LookRotation(orthoFwd, orthoUp);
 
-            // Смещаем центр карандаша так, чтобы кончик localTipOffset (-0.081, 0, 0) оказался точно в tipWorld.
+            // Ставим центр карандаша так, чтобы острый кончик localTipOffset (-0.081, 0, 0) оказался точно в tipWorld.
             worldPos = tipWorld - (worldRot * localTipOffset);
         }
 
@@ -258,15 +285,8 @@ namespace LastSignal.SwitchboardSystem
 
         private void EnsureAudioSource()
         {
-            if (pencilAudioSource == null)
-            {
-                pencilAudioSource = GetComponent<AudioSource>();
-            }
-
-            if (pencilAudioSource == null)
-            {
-                pencilAudioSource = gameObject.AddComponent<AudioSource>();
-            }
+            if (pencilAudioSource == null) pencilAudioSource = GetComponent<AudioSource>();
+            if (pencilAudioSource == null) pencilAudioSource = gameObject.AddComponent<AudioSource>();
 
             pencilAudioSource.playOnAwake = false;
             pencilAudioSource.loop = false;
@@ -275,20 +295,12 @@ namespace LastSignal.SwitchboardSystem
 
         private void CaptureRestPoseIfNeeded()
         {
-            if (_restCaptured)
-            {
-                return;
-            }
-
+            if (_restCaptured) return;
             _restWorldPosition = transform.position;
             _restWorldRotation = transform.rotation;
             _restCaptured = true;
         }
 
-        /// <summary>
-        /// Процедурно синтезирует серию сухих графитных штрихов карандаша по бумаге (~2800–4300 Гц),
-        /// повторяя акустику из HTML-прототипа.
-        /// </summary>
         private static AudioClip CreatePencilScratchClip(string clipName, float durationSec, int strokes, int seed)
         {
             const int sampleRate = 44100;
@@ -305,7 +317,6 @@ namespace LastSignal.SwitchboardSystem
                 int startSample = Mathf.RoundToInt(startSec * sampleRate);
                 int strokeSamples = Mathf.RoundToInt(strokeDur * sampleRate);
 
-                // Простой резонансный полосовой фильтр (2-pole biquad) на 2900–4200 Гц.
                 float fcStart = 2850f + (s % 3) * 420f;
                 float fcEnd = 4150f;
                 float q = 3.0f;
@@ -330,12 +341,9 @@ namespace LastSignal.SwitchboardSystem
                     x2 = x1; x1 = white;
                     y2 = y1; y1 = y;
 
-                    // Плавная атака и сухой спад каждого штриха.
                     float env = u < 0.22f
                         ? (u / 0.22f)
                         : Mathf.Pow(1f - (u - 0.22f) / 0.78f, 1.8f);
-
-                    // Мелкая текстура шероховатости бумаги.
                     float grain = 0.75f + 0.25f * Mathf.Sin(u * Mathf.PI * 10f);
 
                     buffer[startSample + i] += y * env * grain * 1.15f;
@@ -352,6 +360,12 @@ namespace LastSignal.SwitchboardSystem
             return clip;
         }
 
+        private static Vector3 EvalQuadraticBezier(Vector3 p0, Vector3 p1, Vector3 p2, float t)
+        {
+            float inv = 1f - t;
+            return inv * inv * p0 + 2f * inv * t * p1 + t * t * p2;
+        }
+
         private static float SmootherStep(float t)
         {
             t = Mathf.Clamp01(t);
@@ -360,20 +374,9 @@ namespace LastSignal.SwitchboardSystem
 
         private static void DestroyProceduralClip(ref AudioClip clip)
         {
-            if (clip == null)
-            {
-                return;
-            }
-
-            if (Application.isPlaying)
-            {
-                Destroy(clip);
-            }
-            else
-            {
-                DestroyImmediate(clip);
-            }
-
+            if (clip == null) return;
+            if (Application.isPlaying) Destroy(clip);
+            else DestroyImmediate(clip);
             clip = null;
         }
     }

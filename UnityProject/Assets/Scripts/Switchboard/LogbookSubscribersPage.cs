@@ -74,6 +74,8 @@ namespace LastSignal.SwitchboardSystem
         private bool _dirty;
 
         public string LastClickedSubscriberId { get; private set; }
+        public Texture PageTexture => _pageRenderTexture;
+        public bool AllowPageInteraction { get; set; } = true;
 
         /// <summary>Срабатывает при клике по строке абонента: (id позывного, отображаемое имя).</summary>
         public event Action<string, string> OnSubscriberClicked;
@@ -121,7 +123,7 @@ namespace LastSignal.SwitchboardSystem
                 _dirty = true;
             }
 
-            bool isBookOpen = bookInspectController == null || bookInspectController.IsInspecting;
+            bool isBookOpen = (bookInspectController == null || bookInspectController.IsInspecting) && AllowPageInteraction;
             if (!isBookOpen)
             {
                 if (_hoveredRowIndex != -1)
@@ -224,7 +226,7 @@ namespace LastSignal.SwitchboardSystem
 
         private void BuildOffscreenCanvas()
         {
-            _pageRenderTexture = new RenderTexture(TexWidth, TexHeight, 0, RenderTextureFormat.ARGB32)
+            _pageRenderTexture = new RenderTexture(TexWidth, TexHeight, 16, RenderTextureFormat.ARGB32)
             {
                 name = "RT_Logbook_LeftPage",
                 filterMode = FilterMode.Trilinear,

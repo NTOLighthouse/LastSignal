@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -161,6 +162,13 @@ namespace LastSignal.SwitchboardSystem
         {
             if (!_hasFocus || _systemCursorOverride)
             {
+                SetReticleVisible(false);
+                return;
+            }
+
+            if (GameplayInputGate.ShouldHideReticle)
+            {
+                if (Cursor.visible) Cursor.visible = false;
                 SetReticleVisible(false);
                 return;
             }
@@ -384,6 +392,11 @@ namespace LastSignal.SwitchboardSystem
             if (letterInspect != null && letterInspect.IsReading)
             {
                 return ReticleState.Idle;
+            }
+
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            {
+                return ReticleState.Hover;
             }
 
             Camera cam = interactionCamera != null ? interactionCamera : Camera.main;

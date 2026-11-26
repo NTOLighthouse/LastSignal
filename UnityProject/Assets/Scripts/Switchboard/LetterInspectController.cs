@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -171,7 +172,7 @@ namespace LastSignal.SwitchboardSystem
         {
             UpdateAnimationStateMachine();
 
-            if (cameraLook == null)
+            if (cameraLook == null || GameplayInputGate.IsBlocked)
             {
                 return;
             }
@@ -194,6 +195,7 @@ namespace LastSignal.SwitchboardSystem
 
             if (_state == LetterMotionState.Resting &&
                 WasLeftMousePressed(out Vector2 mousePos) &&
+                !(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) &&
                 IsClickOnLetter(mousePos))
             {
                 PickUpAndUnfoldLetter();

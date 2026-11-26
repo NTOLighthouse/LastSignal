@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -133,6 +134,15 @@ namespace LastSignal.SwitchboardSystem
 
         private void HandleInput()
         {
+            if (GameplayInputGate.IsBlocked)
+            {
+                if (_isHoldingKnob)
+                {
+                    EndKnobHold();
+                }
+                return;
+            }
+
             // Не перехватываем клики, если игрок держит штекер коммутатора.
             if (switchboardInteractor != null && switchboardInteractor.ActivePlug != null)
             {
@@ -145,7 +155,9 @@ namespace LastSignal.SwitchboardSystem
 
             if (!_isHoldingKnob)
             {
-                if (WasLeftMousePressed(out Vector2 mousePos) && IsHitOnTuningKnob(mousePos))
+                if (WasLeftMousePressed(out Vector2 mousePos) &&
+                    !(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) &&
+                    IsHitOnTuningKnob(mousePos))
                 {
                     BeginKnobHold(mousePos);
                 }

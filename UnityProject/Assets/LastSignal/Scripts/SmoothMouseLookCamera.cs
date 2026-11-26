@@ -26,6 +26,12 @@ namespace LastSignal
         [SerializeField, Range(0f, 30f)] private float defaultFocusHorizontalAngle = 6f;
         [SerializeField, Range(0f, 30f)] private float defaultFocusVerticalAngle = 5f;
 
+        [Header("Тряска камеры при близких разрывах (Trauma)")]
+        [SerializeField, Min(0.1f)] private float shakeDecayPerSecond = 0.85f;
+        [SerializeField, Min(0f)] private float maxShakePositionMeters = 0.028f;
+        [SerializeField, Min(0f)] private float maxShakeAngleDegrees = 3.2f;
+        [SerializeField, Min(1f)] private float shakeFrequency = 22f;
+
         private Vector3 _defaultWorldPosition;
         private Quaternion _defaultWorldRotation;
 
@@ -65,6 +71,8 @@ namespace LastSignal
         private float _pitchVelocity;
         private float _targetYaw;
         private float _targetPitch;
+        private float _shakeTrauma;
+        private float _shakeClock;
 
         public bool IsFocused => _isFocused;
         public object CurrentFocusOwner => _currentFocusOwner;
@@ -100,6 +108,41 @@ namespace LastSignal
         {
             _yawVelocity = 0f;
             _pitchVelocity = 0f;
+            GameplayInputGate.OnBlockedChanged += HandleInputBlockedChanged;
+        }
+
+        private void OnDisable()
+        {
+            GameplayInputGate.OnBlockedChanged -= HandleInputBlockedChanged;
+        }
+
+        /// <summary>
+        /// Нативно сбрасывает углы взгляда строго в центр (0, 0) и центрирует системный курсор в середину экрана.
+        /// </summary>
+        public void CenterLookAndCursor()
+        {
+            _currentYaw = 0f;
+            _currentPitch = 0f;
+            _targetYaw = 0f;
+            _targetPitch = 0f;
+            _yawVelocity = 0f;
+            _pitchVelocity = 0f;
+
+#if ENABLE_INPUT_SYSTEM
+            Mouse mouse = Mouse.current;
+            if (mouse != null && Screen.width > 0 && Screen.height > 0 && Application.isFocused)
+            {
+                mouse.WarpCursorPosition(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
+            }
+#endif
+        }
+
+        private void HandleInputBlockedChanged(bool blocked)
+        {
+            if (!blocked)
+            {
+                CenterLookAndCursor();
+            }
         }
 
         /// <summary>
@@ -248,7 +291,16 @@ namespace LastSignal
             // чтобы взгляд идеально плавно переходил в интерактивный режим.
             float lookBlend = _transitionProgress < 1f ? SmootherStep(Mathf.InverseLerp(0.35f, 1f, _transitionProgress)) : 1f;
 
-            if (TryReadNormalizedMouse(out Vector2 normalized))
+            if (GameplayInputGate.IsBlocked)
+            {
+                _targetYaw = 0f;
+                _targetPitch = 0f;
+                _currentYaw = 0f;
+                _currentPitch = 0f;
+                _yawVelocity = 0f;
+                _pitchVelocity = 0f;
+            }
+            else if (TryReadNormalizedMouse(out Vector2 normalized))
             {
                 if (_isLookHoldActive)
                 {
@@ -279,8 +331,37 @@ namespace LastSignal
             _currentYaw = Mathf.Clamp(_currentYaw, -_activeMaxHorizontalAngle, _activeMaxHorizontalAngle);
             _currentPitch = Mathf.Clamp(_currentPitch, -_activeMaxVerticalAngle, _activeMaxVerticalAngle);
 
-            transform.position = _currentBasePosition;
-            transform.rotation = _currentBaseRotation * Quaternion.Euler(_currentPitch, _currentYaw, 0f);
+            Vector3 shakePosOffset = Vector3.zero;
+            Quaternion shakeRotOffset = Quaternion.identity;
+
+            if (_shakeTrauma > 0.0001f)
+            {
+                _shakeClock += dt * shakeFrequency;
+                float power = _shakeTrauma * _shakeTrauma;
+                float nx = (Mathf.PerlinNoise(_shakeClock, 11.3f) - 0.5f) * 2f;
+                float ny = (Mathf.PerlinNoise(27.7f, _shakeClock) - 0.5f) * 2f;
+                float nr = (Mathf.PerlinNoise(_shakeClock * 0.85f, 53.1f) - 0.5f) * 2f;
+
+                shakePosOffset = _currentBaseRotation * new Vector3(nx, ny, 0f) * (maxShakePositionMeters * power);
+                shakeRotOffset = Quaternion.Euler(
+                    ny * maxShakeAngleDegrees * power,
+                    nx * maxShakeAngleDegrees * 0.8f * power,
+                    nr * maxShakeAngleDegrees * 1.15f * power);
+
+                _shakeTrauma = Mathf.MoveTowards(_shakeTrauma, 0f, shakeDecayPerSecond * dt);
+            }
+
+            transform.position = _currentBasePosition + shakePosOffset;
+            transform.rotation = _currentBaseRotation * Quaternion.Euler(_currentPitch, _currentYaw, 0f) * shakeRotOffset;
+        }
+
+        /// <summary>
+        /// Добавляет физичную затухающую тряску камеры (например, при близком разрыве снаряда).
+        /// Не нарушает базовую позу камеры и режимы фокуса.
+        /// </summary>
+        public void AddTraumaShake(float amount01)
+        {
+            _shakeTrauma = Mathf.Clamp01(_shakeTrauma + Mathf.Clamp01(amount01));
         }
 
         private static float SmootherStep(float t)

@@ -1,0 +1,197 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49918525faac31e4fa82ea69d673a9d3, type: 3}
+  m_Name: Call_1_1_Bereza_Intro
+  m_EditorClassIdentifier: Assembly-CSharp::LastSignal.StoryCore.CallScenarioAsset
+  callId: 1.1
+  callTitle: "1.1. \xAB\u0411\u0435\u0440\u0451\u0437\u0430\xBB \u0432\u044B\u0437\u044B\u0432\u0430\u0435\u0442
+    \xAB\u041C\u0430\u044F\u043A\xBB. \u041A\u043D\u0438\u0433\u0430 \u0438 \u043F\u0430\u0440\u043E\u043B\u044C"
+  nightNumber: 1
+  subscriberPort: 1
+  isPlayerInitiatedOutgoing: 0
+  callerAmbientLoop: {fileID: 0}
+  callerAmbientVolume: 0.28
+  scheduledHour: 23
+  scheduledMinute: 40
+  startImmediatelyInSequence: 1
+  delayBeforeRingingSeconds: 1
+  patienceOverrideSeconds: -1
+  requiredFlag: 0
+  forbiddenFlag: 0
+  requiredCompletedCallId: 
+  requiresRadioTuning: 0
+  targetRadioFrequency01: 0.65
+  radioTuningTolerance: 0.09
+  pauseAndResumeOnDisconnect: 1
+  treatHangUpAsRefusal: 0
+  flagOnHangUp: 0
+  flagOnHangUpValue: 0
+  entryNodeId: intro
+  nodes:
+  - nodeId: intro
+    speakerName: "\u0414\u0401\u041C\u0418\u041D (\xAB\u0411\u0435\u0440\u0451\u0437\u0430\xBB)"
+    speakerColor: {r: 0.96, g: 0.78, b: 0.44, a: 1}
+    subtitleText: "\u041C\u0430\u044F\u043A, \u041C\u0430\u044F\u043A, \u044F \u0411\u0435\u0440\u0451\u0437\u0430.
+      \u041A\u0430\u043A \u0441\u043B\u044B\u0448\u043D\u043E? \u041F\u0440\u0438\u0451\u043C."
+    voiceClip: {fileID: 0}
+    fallbackDuration: 3.2
+    postLineDelay: 0.35
+    conditionRequiredFlag: 0
+    conditionForbiddenFlag: 0
+    skipToNodeId: 
+    waitAction: 0
+    expectedSubscriber: 0
+    actionHintText: 
+    logbookNoteToAdd: 
+    flagToSet: 0
+    flagValue: 1
+    roomEffect: 0
+    endingToTrigger: 0
+    choices:
+    - choiceText: "\u041C\u0430\u044F\u043A \u0441\u043B\u0443\u0448\u0430\u0435\u0442."
+      nextNodeId: explain_book
+      requiredKeywordId: 
+      showLockedWhenMissingKeyword: 0
+      requiredFlag: 0
+      forbiddenFlag: 0
+      flagToSet: 0
+      flagValue: 1
+      logbookNoteToAdd: 
+      endingToTrigger: 0
+    autoNextNodeId: 
+  - nodeId: explain_book
+    speakerName: "\u0414\u0401\u041C\u0418\u041D (\xAB\u0411\u0435\u0440\u0451\u0437\u0430\xBB)"
+    speakerColor: {r: 0.96, g: 0.78, b: 0.44, a: 1}
+    subtitleText: "\u041E, \u0436\u0438\u0432\u043E\u0439 \u0433\u043E\u043B\u043E\u0441.
+      \u0421\u0435\u0440\u0436\u0430\u043D\u0442 \u0414\u0451\u043C\u0438\u043D,
+      \u0446\u0435\u043D\u0442\u0440\u0430\u043B\u044C\u043D\u044B\u0439 \u0443\u0437\u0435\u043B.
+      \u041D\u0430\u0441 \u043D\u0430 \u0432\u0435\u0441\u044C \u0443\u0447\u0430\u0441\u0442\u043E\u043A
+      \u0434\u0432\u043E\u0435 \u0438 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C
+      \u2014 \u044F \u0434\u0430 \u0442\u044B. \u041A\u043D\u0438\u0433\u0443 \u0432\u0438\u0434\u0438\u0448\u044C?
+      \u0421\u0435\u0440\u0430\u044F, \u0441\u043B\u0435\u0432\u0430. \u041E\u0442\u043A\u0440\u043E\u0439."
+    voiceClip: {fileID: 0}
+    fallbackDuration: 5.5
+    postLineDelay: 0.35
+    conditionRequiredFlag: 0
+    conditionForbiddenFlag: 0
+    skipToNodeId: 
+    waitAction: 1
+    expectedSubscriber: 0
+    actionHintText: "\u041E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u0441\u0435\u0440\u0443\u044E
+      \u043A\u043D\u0438\u0433\u0443 \u043F\u043E\u0437\u044B\u0432\u043D\u044B\u0445
+      \u043D\u0430 \u0441\u0442\u043E\u043B\u0435 (\u041B\u041A\u041C \u043F\u043E
+      \u043A\u043D\u0438\u0433\u0435)"
+    logbookNoteToAdd: 
+    flagToSet: 0
+    flagValue: 1
+    roomEffect: 0
+    endingToTrigger: 0
+    choices: []
+    autoNextNodeId: find_romashka
+  - nodeId: find_romashka
+    speakerName: "\u0414\u0401\u041C\u0418\u041D (\xAB\u0411\u0435\u0440\u0451\u0437\u0430\xBB)"
+    speakerColor: {r: 0.96, g: 0.78, b: 0.44, a: 1}
+    subtitleText: "\u0422\u0430\u043C \u0432\u0441\u0435, \u043A\u0442\u043E \u0438\u043C\u0435\u0435\u0442
+      \u043F\u0440\u0430\u0432\u043E \u0442\u0435\u0431\u044F \u0431\u0435\u0441\u043F\u043E\u043A\u043E\u0438\u0442\u044C.
+      \u041F\u043E\u0437\u044B\u0432\u043D\u043E\u0439, \u043A\u0442\u043E \u0442\u0430\u043A\u043E\u0439,
+      \u0433\u0434\u0435 \u0441\u0438\u0434\u0438\u0442. \u041D\u0430\u0439\u0434\u0438
+      \u043C\u043D\u0435, \u043A\u0442\u043E \u0442\u0430\u043A\u0430\u044F \u0420\u043E\u043C\u0430\u0448\u043A\u0430."
+    voiceClip: {fileID: 0}
+    fallbackDuration: 4.2
+    postLineDelay: 0.35
+    conditionRequiredFlag: 0
+    conditionForbiddenFlag: 0
+    skipToNodeId: 
+    waitAction: 2
+    expectedSubscriber: 7
+    actionHintText: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0438 \u043D\u0430\u0436\u043C\u0438\u0442\u0435
+      \u0441\u0442\u0440\u043E\u043A\u0443 \xAB\u0420\u043E\u043C\u0430\u0448\u043A\u0430\xBB
+      \u043D\u0430 \u043B\u0435\u0432\u043E\u0439 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0435
+      \u043A\u043D\u0438\u0433\u0438"
+    logbookNoteToAdd: 
+    flagToSet: 0
+    flagValue: 1
+    roomEffect: 0
+    endingToTrigger: 0
+    choices: []
+    autoNextNodeId: ask_password
+  - nodeId: ask_password
+    speakerName: "\u0414\u0401\u041C\u0418\u041D (\xAB\u0411\u0435\u0440\u0451\u0437\u0430\xBB)"
+    speakerColor: {r: 0.96, g: 0.78, b: 0.44, a: 1}
+    subtitleText: "\u0412\u0435\u0440\u043D\u043E, \u043C\u0435\u0434\u0438\u0446\u0438\u043D\u0430.
+      \u041F\u0435\u0440\u0432\u043E\u0435 \u043F\u0440\u0430\u0432\u0438\u043B\u043E:
+      \u043D\u0435\u0442 \u0432 \u043A\u043D\u0438\u0433\u0435 \u2014 \u043D\u0435\u0442
+      \u0432 \u044D\u0444\u0438\u0440\u0435. \u0412\u0442\u043E\u0440\u043E\u0435:
+      \u0441\u043E\u043C\u043D\u0435\u0432\u0430\u0435\u0448\u044C\u0441\u044F \u2014
+      \u0441\u043F\u0440\u043E\u0441\u0438 \u043F\u0430\u0440\u043E\u043B\u044C.
+      \u0421\u0435\u0433\u043E\u0434\u043D\u044F \u043F\u0430\u0440\u043E\u043B\u044C
+      [\u041E\u043B\u044C\u0445\u0430|pwd_olha_n1]. \u0413\u043B\u044F\u043D\u044C
+      \u0432 \u0442\u0430\u0431\u043B\u0438\u0446\u0443 \u043D\u0430 \u0420\u0430\u0437\u0432\u043E\u0440\u043E\u0442\u0435
+      II (A/D \u0438\u043B\u0438 \u0437\u0430\u043A\u043B\u0430\u0434\u043A\u0430),
+      \u0430 \u0442\u0435\u043F\u0435\u0440\u044C \u0441\u043F\u0440\u043E\u0441\u0438
+      \u043C\u0435\u043D\u044F."
+    voiceClip: {fileID: 0}
+    fallbackDuration: 5.5
+    postLineDelay: 0.35
+    conditionRequiredFlag: 0
+    conditionForbiddenFlag: 0
+    skipToNodeId: 
+    waitAction: 0
+    expectedSubscriber: 0
+    actionHintText: 
+    logbookNoteToAdd: 
+    flagToSet: 0
+    flagValue: 1
+    roomEffect: 0
+    endingToTrigger: 0
+    choices:
+    - choiceText: "\u041F\u0430\u0440\u043E\u043B\u044C. \u041E\u043B\u044C\u0445\u0430."
+      nextNodeId: password_reply
+      requiredKeywordId: 
+      showLockedWhenMissingKeyword: 0
+      requiredFlag: 0
+      forbiddenFlag: 0
+      flagToSet: 0
+      flagValue: 1
+      logbookNoteToAdd: 
+      endingToTrigger: 0
+    autoNextNodeId: 
+  - nodeId: password_reply
+    speakerName: "\u0414\u0401\u041C\u0418\u041D (\xAB\u0411\u0435\u0440\u0451\u0437\u0430\xBB)"
+    speakerColor: {r: 0.96, g: 0.78, b: 0.44, a: 1}
+    subtitleText: "\u041A\u0440\u0435\u043C\u0435\u043D\u044C. \u0412\u043E\u0442
+      \u0442\u0430\u043A. \u041D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B\u0438
+      \u2014 \u043A\u043B\u0430\u0434\u0438 \u0442\u0440\u0443\u0431\u043A\u0443,
+      \u0445\u043E\u0442\u044C \u0442\u0430\u043C \u0441\u0430\u043C \u0433\u0435\u043D\u0435\u0440\u0430\u043B.
+      \u0422\u0440\u0435\u0442\u044C\u0435 \u043F\u0440\u0430\u0432\u0438\u043B\u043E
+      \u0441\u043A\u0430\u0436\u0443 \u043F\u043E\u0442\u043E\u043C, \u043E\u043D\u043E
+      \u043D\u0435\u0432\u0435\u0441\u0451\u043B\u043E\u0435. \u0421\u0435\u0439\u0447\u0430\u0441
+      \u043A \u0442\u0435\u0431\u0435 \u043F\u043E\u0439\u0434\u0443\u0442 \u043B\u044E\u0434\u0438.
+      \u0420\u0430\u0431\u043E\u0442\u0430\u0439. \u041A\u043E\u043D\u0435\u0446
+      \u0441\u0432\u044F\u0437\u0438."
+    voiceClip: {fileID: 0}
+    fallbackDuration: 6
+    postLineDelay: 0.35
+    conditionRequiredFlag: 0
+    conditionForbiddenFlag: 0
+    skipToNodeId: 
+    waitAction: 0
+    expectedSubscriber: 0
+    actionHintText: 
+    logbookNoteToAdd: "\u041D\u0435\u0442 \u0432 \u043A\u043D\u0438\u0433\u0435 \u2014
+      \u043D\u0435\u0442 \u0432 \u044D\u0444\u0438\u0440\u0435"
+    flagToSet: 0
+    flagValue: 1
+    roomEffect: 0
+    endingToTrigger: 0
+    choices: []
+    autoNextNodeId: 
