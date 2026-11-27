@@ -282,10 +282,24 @@ namespace LastSignal.SwitchboardSystem
                     worldPoint.x = Mathf.Clamp(worldPoint.x, carryClampX.x, carryClampX.y);
                     worldPoint.y = Mathf.Clamp(worldPoint.y, carryClampY.x, carryClampY.y);
 
-                    Quaternion aimRot = Quaternion.LookRotation(panelInward, Vector3.up);
+                    Quaternion aimRot = GetStableCarryRotation(panelInward);
                     ActivePlug.SetCarryTarget(worldPoint, aimRot);
                 }
             }
+        }
+
+        private Quaternion GetStableCarryRotation(Vector3 panelInward)
+        {
+            CollectTargetsIfNeeded();
+            for (int i = 0; i < ports.Count; i++)
+            {
+                if (ports[i] != null)
+                {
+                    return ports[i].GetPlugTargetRotation();
+                }
+            }
+
+            return Quaternion.LookRotation(panelInward, Vector3.up);
         }
 
         private bool TryGetPanelReference(out Vector3 center, out Vector3 inward)

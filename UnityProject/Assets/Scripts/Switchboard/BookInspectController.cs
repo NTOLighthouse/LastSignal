@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
@@ -55,6 +56,22 @@ namespace LastSignal.SwitchboardSystem
         private float _blendProgress;
 
         public bool IsInspecting { get; private set; }
+        public bool IsPickUpPending { get; private set; }
+        public bool IsPutDownPending { get; private set; }
+
+        /// <summary>
+        /// Опциональный внешний координатор (например, хореография рук): если возвращает true,
+        /// книга ждёт вызова переданного колбэка перед началом движения поднятия.
+        /// </summary>
+        public Func<Action, bool> OnBeforePickUp;
+
+        /// <summary>
+        /// Опциональный внешний координатор: если возвращает true, книга ждёт колбэк перед началом опускания.
+        /// </summary>
+        public Func<Action, bool> OnBeforePutDown;
+
+        /// <summary>Срабатывает, если отложенное взятие книги было отменено до начала её движения.</summary>
+        public event Action OnPickUpCancelled;
 
         private void Awake()
         {
@@ -97,6 +114,9 @@ namespace LastSignal.SwitchboardSystem
                 cameraLook.OnFocusOwnerChanged -= HandleCameraFocusOwnerChanged;
             }
 
+            IsPickUpPending = false;
+            IsPutDownPending = false;
+
             if (backgroundBlurVolume != null)
             {
                 backgroundBlurVolume.weight = 0f;
@@ -118,7 +138,12 @@ namespace LastSignal.SwitchboardSystem
                 return;
             }
 
-            if (IsInspecting)
+            if (IsPutDownPending)
+            {
+                return;
+            }
+
+            if (IsInspecting || IsPickUpPending)
             {
                 if ((closeOnEscape && WasEscapePressed()) ||
                     (closeOnRightClick && WasRightMousePressed()))
@@ -138,11 +163,33 @@ namespace LastSignal.SwitchboardSystem
         }
 
         /// <summary>
-        /// Плавно поднимает книгу со стола, фиксирует её перед взглядом и размывает фон.
+        /// Запрашивает поднятие книги со стола. При наличии координатора (OnBeforePickUp)
+        /// ждёт сигнала готовности перед началом физического движения книги.
         /// </summary>
         public void PickUpBook()
         {
+            if (IsInspecting || IsPickUpPending)
+            {
+                return;
+            }
+
             CaptureTablePoseIfNeeded();
+            IsPutDownPending = false;
+
+            if (OnBeforePickUp != null && OnBeforePickUp.Invoke(ExecutePickUpNow))
+            {
+                IsPickUpPending = true;
+                return;
+            }
+
+            ExecutePickUpNow();
+        }
+
+        private void ExecutePickUpNow()
+        {
+            CaptureTablePoseIfNeeded();
+            IsPickUpPending = false;
+            IsPutDownPending = false;
             IsInspecting = true;
 
             if (inspectPoseTarget != null)
@@ -172,6 +219,31 @@ namespace LastSignal.SwitchboardSystem
         public void PutBookBack()
         {
             CaptureTablePoseIfNeeded();
+
+            if (IsPickUpPending)
+            {
+                IsPickUpPending = false;
+                OnPickUpCancelled?.Invoke();
+                return;
+            }
+
+            if (!IsInspecting || IsPutDownPending)
+            {
+                return;
+            }
+
+            if (OnBeforePutDown != null && OnBeforePutDown.Invoke(ExecutePutDownNow))
+            {
+                IsPutDownPending = true;
+                return;
+            }
+
+            ExecutePutDownNow();
+        }
+
+        private void ExecutePutDownNow()
+        {
+            IsPutDownPending = false;
             IsInspecting = false;
 
             if (cameraLook != null)
@@ -217,9 +289,9 @@ namespace LastSignal.SwitchboardSystem
 
         private void HandleCameraFocusOwnerChanged(object newOwner)
         {
-            if (IsInspecting && !ReferenceEquals(newOwner, this))
+            if ((IsInspecting || IsPickUpPending) && !ReferenceEquals(newOwner, this))
             {
-                IsInspecting = false;
+                PutBookBack();
             }
         }
 

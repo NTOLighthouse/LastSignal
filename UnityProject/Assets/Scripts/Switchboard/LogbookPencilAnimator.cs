@@ -10,6 +10,7 @@ namespace LastSignal.SwitchboardSystem
     /// поверхности правой страницы (без проваливания под книгу/стол), выводит мягкие рукописные штрихи
     /// синхронно с проявлением текста и звуком графита, затем аккуратно кладёт карандаш обратно на стол.
     /// </summary>
+    [DefaultExecutionOrder(0)]
     public sealed class LogbookPencilAnimator : MonoBehaviour
     {
         // Точный замеренный профиль кривизны Logbook_Page_Right.001 (y = 0.0020 .. 0.1560 -> z поверхности).

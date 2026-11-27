@@ -88,7 +88,16 @@ namespace LastSignal.StoryCore
 
         public int CurrentSpreadIndex => currentSpreadIndex;
         public bool IsTurningPage => _turnCoroutine != null;
+        public bool IsPageTurnPending { get; private set; }
+        public float TurnProgress01 { get; private set; }
+        public bool TurningForward { get; private set; }
         public event Action<int> OnSpreadChanged;
+
+        /// <summary>
+        /// Опциональный внешний координатор (например, хореография рук): получает целевой разворот (0/1)
+        /// и колбэк запуска 3D-перелистывания. Если возвращает true — страница ждёт сигнала от координатора.
+        /// </summary>
+        public Func<int, Action, bool> OnBeforePageTurn;
 
         private void Awake()
         {
@@ -152,7 +161,8 @@ namespace LastSignal.StoryCore
             if (GameplayInputGate.IsBlocked ||
                 bookInspectController == null ||
                 !bookInspectController.IsInspecting ||
-                IsTurningPage)
+                IsTurningPage ||
+                IsPageTurnPending)
             {
                 return;
             }
@@ -183,23 +193,54 @@ namespace LastSignal.StoryCore
         public void SetSpread(int spreadIndex, bool playSound = true)
         {
             int target = Mathf.Clamp(spreadIndex, 0, 1);
-            if (target == currentSpreadIndex && !IsTurningPage)
+            if (target == currentSpreadIndex && !IsTurningPage && !IsPageTurnPending)
             {
                 return;
             }
 
-            if (IsTurningPage && target == _turningTargetSpread)
+            if ((IsTurningPage || IsPageTurnPending) && target == _turningTargetSpread)
             {
                 return;
             }
 
             if (!gameObject.activeInHierarchy || _turningLeafGo == null)
             {
+                IsPageTurnPending = false;
                 currentSpreadIndex = target;
                 ApplySpreadTexturesImmediate(target);
                 OnSpreadChanged?.Invoke(currentSpreadIndex);
                 return;
             }
+
+            if (OnBeforePageTurn != null)
+            {
+                _turningTargetSpread = target;
+                IsPageTurnPending = true;
+                if (OnBeforePageTurn.Invoke(target, () => ExecutePageTurnNow(target, playSound)))
+                {
+                    return;
+                }
+
+                IsPageTurnPending = false;
+            }
+
+            ExecutePageTurnNow(target, playSound);
+        }
+
+        public void CancelPendingPageTurn()
+        {
+            if (!IsPageTurnPending)
+            {
+                return;
+            }
+
+            IsPageTurnPending = false;
+            _turningTargetSpread = -1;
+        }
+
+        private void ExecutePageTurnNow(int target, bool playSound)
+        {
+            IsPageTurnPending = false;
 
             if (_turnCoroutine != null)
             {
@@ -320,17 +361,22 @@ namespace LastSignal.StoryCore
                 PlayFlipSound();
             }
 
+            TurningForward = forward;
+            TurnProgress01 = 0f;
+
             float elapsed = 0f;
             float dur = Mathf.Max(0.2f, pageTurnDuration);
             while (elapsed < dur)
             {
                 elapsed += Time.unscaledDeltaTime;
                 float s = SmootherStep(elapsed / dur);
+                TurnProgress01 = s;
                 float p = forward ? s : (1f - s);
                 DeformTurningLeaf(p, turningForward: forward);
                 yield return null;
             }
 
+            TurnProgress01 = 1f;
             currentSpreadIndex = targetSpread;
             _turningTargetSpread = -1;
             ApplySpreadTexturesImmediate(currentSpreadIndex);

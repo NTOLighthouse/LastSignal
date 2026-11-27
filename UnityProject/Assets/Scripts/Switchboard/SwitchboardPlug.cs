@@ -7,6 +7,7 @@ namespace LastSignal.SwitchboardSystem
     /// Запоминает базовую позицию, плавно следует за курсором при взятии,
     /// перемещается в выбранный порт или возвращается на базу.
     /// </summary>
+    [DefaultExecutionOrder(0)]
     public sealed class SwitchboardPlug : MonoBehaviour
     {
         private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
@@ -39,6 +40,20 @@ namespace LastSignal.SwitchboardSystem
         {
             _plugRenderer = GetComponentInChildren<Renderer>();
             _propertyBlock = new MaterialPropertyBlock();
+            ForceDisablePhysics();
+        }
+
+        private void ForceDisablePhysics()
+        {
+            Rigidbody[] rbs = GetComponentsInChildren<Rigidbody>(true);
+            for (int i = 0; i < rbs.Length; i++)
+            {
+                if (rbs[i] != null)
+                {
+                    rbs[i].isKinematic = true;
+                    rbs[i].useGravity = false;
+                }
+            }
         }
 
         private void Start()
@@ -67,6 +82,7 @@ namespace LastSignal.SwitchboardSystem
         public void PickUp()
         {
             CaptureHomePoseIfNeeded();
+            ForceDisablePhysics();
 
             if (CurrentPort != null)
             {

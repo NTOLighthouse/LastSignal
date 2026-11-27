@@ -55,12 +55,17 @@ namespace LastSignal.SwitchboardSystem
         [SerializeField] private LayerMask raycastMask = ~0;
         [SerializeField, Min(0.5f)] private float maxRayDistance = 15f;
 
+        [Header("Колёсико мыши")]
+        [SerializeField, Min(0.001f)] private float scrollWheelSensitivity = 0.035f;
+        [SerializeField, Min(0.05f)] private float scrollHoldDuration = 0.35f;
+
         private Quaternion _knobBaseLocalRotation;
         private Vector3 _needleCenterLocalPosition;
         private bool _posesCaptured;
 
         private AudioClip _proceduralStaticClip;
         private bool _isHoldingKnob;
+        private float _scrollHoldTimer;
         private Vector2 _lastMousePosition;
         private float _targetTuning;
         private float _displayTuning;
@@ -72,6 +77,12 @@ namespace LastSignal.SwitchboardSystem
         public float NormalizedTuning => _targetTuning;
         public float CurrentFrequencyMHz => Mathf.Lerp(minFrequencyMHz, maxFrequencyMHz, _targetTuning);
         public bool IsHoldingKnob => _isHoldingKnob;
+        public bool IsTurningOrHolding => _isHoldingKnob || _scrollHoldTimer > 0f;
+        public Transform TuningKnob => tuningKnob;
+        public float KnobAngleDegrees => (invertKnobRotation ? -1f : 1f) * (_displayTuning - 0.5f) * knobTotalRotationDegrees;
+        public Vector3 KnobWorldAxis => tuningKnob != null
+            ? tuningKnob.TransformDirection(knobRotationAxis.sqrMagnitude > 1e-5f ? knobRotationAxis.normalized : Vector3.right)
+            : Vector3.forward;
 
         /// <summary>Срабатывает при изменении настройки (значение 0..1).</summary>
         public event Action<float> OnTuningChanged;
@@ -134,12 +145,18 @@ namespace LastSignal.SwitchboardSystem
 
         private void HandleInput()
         {
+            if (_scrollHoldTimer > 0f)
+            {
+                _scrollHoldTimer = Mathf.Max(0f, _scrollHoldTimer - Time.unscaledDeltaTime);
+            }
+
             if (GameplayInputGate.IsBlocked)
             {
                 if (_isHoldingKnob)
                 {
                     EndKnobHold();
                 }
+                _scrollHoldTimer = 0f;
                 return;
             }
 
@@ -150,7 +167,27 @@ namespace LastSignal.SwitchboardSystem
                 {
                     EndKnobHold();
                 }
+                _scrollHoldTimer = 0f;
                 return;
+            }
+
+            // Поддержка прокрутки колёсиком мыши при наведении на крутилку радио
+            if (!_isHoldingKnob &&
+                TryGetMouseScroll(out float scrollDelta, out Vector2 scrollMousePos) &&
+                Mathf.Abs(scrollDelta) > 0.01f &&
+                !(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) &&
+                IsHitOnTuningKnob(scrollMousePos))
+            {
+                float prev = _targetTuning;
+                _targetTuning = Mathf.Clamp01(_targetTuning + Mathf.Sign(scrollDelta) * scrollWheelSensitivity);
+                _scrollHoldTimer = scrollHoldDuration;
+                _turnActivityTimer = turnHoldGraceSeconds;
+                _turnSpeedNormalized = 0.65f;
+                if (!Mathf.Approximately(prev, _targetTuning))
+                {
+                    OnTuningChanged?.Invoke(_targetTuning);
+                    OnFrequencyChanged?.Invoke(CurrentFrequencyMHz);
+                }
             }
 
             if (!_isHoldingKnob)
@@ -259,7 +296,7 @@ namespace LastSignal.SwitchboardSystem
                 _turnSpeedNormalized = Mathf.MoveTowards(_turnSpeedNormalized, 0f, dt * 4f);
             }
 
-            bool shouldPlayNoise = _isHoldingKnob && _turnActivityTimer > 0f;
+            bool shouldPlayNoise = (_isHoldingKnob || _scrollHoldTimer > 0f) && _turnActivityTimer > 0f;
             float targetEnv = shouldPlayNoise ? 1f : 0f;
             float fadeDuration = shouldPlayNoise ? staticFadeInSeconds : staticFadeOutSeconds;
 
@@ -485,6 +522,26 @@ namespace LastSignal.SwitchboardSystem
 
             mousePosition = Vector2.zero;
             return false;
+#endif
+        }
+
+        private static bool TryGetMouseScroll(out float scrollY, out Vector2 mousePosition)
+        {
+#if ENABLE_INPUT_SYSTEM
+            Mouse mouse = Mouse.current;
+            if (mouse != null)
+            {
+                scrollY = mouse.scroll.ReadValue().y;
+                mousePosition = mouse.position.ReadValue();
+                return true;
+            }
+            scrollY = 0f;
+            mousePosition = Vector2.zero;
+            return false;
+#else
+            scrollY = Input.mouseScrollDelta.y;
+            mousePosition = Input.mousePosition;
+            return true;
 #endif
         }
 

@@ -9,6 +9,7 @@ namespace LastSignal
     /// Плавное следование камеры за положением курсора мыши в ограниченных углах обзора.
     /// Не блокирует курсор и не выходит за пределы заданных ограничений.
     /// </summary>
+    [DefaultExecutionOrder(40)]
     public sealed class SmoothMouseLookCamera : MonoBehaviour
     {
         [Header("Ограничения поворота (градусы в каждую сторону)")]
@@ -73,6 +74,7 @@ namespace LastSignal
         private float _targetPitch;
         private float _shakeTrauma;
         private float _shakeClock;
+        private CameraHandFollow _handFollow;
 
         public bool IsFocused => _isFocused;
         public object CurrentFocusOwner => _currentFocusOwner;
@@ -102,6 +104,7 @@ namespace LastSignal
             _transitionTargetMaxH = maxHorizontalAngle;
             _transitionTargetMaxV = maxVerticalAngle;
             _transitionProgress = 1f;
+            _handFollow = GetComponent<CameraHandFollow>();
         }
 
         private void OnEnable()
@@ -249,10 +252,10 @@ namespace LastSignal
             float targetMaxV,
             float durationSeconds)
         {
-            // Впекаем текущий визуальный поворот камеры (включая смещение от мыши) в стартовую точку,
-            // чтобы при смене лимитов (например 40° -> 6°) не было ни малейшего скачка!
-            _transitionStartPosition = transform.position;
-            _transitionStartRotation = transform.rotation;
+            // NEVER read transform.position/rotation back (that would bake additive CameraHandFollow offset and cause feedback-loop dives!).
+            // Always start cleanly from internal pure base pose + current mouse-look yaw/pitch.
+            _transitionStartPosition = _currentBasePosition;
+            _transitionStartRotation = _currentBaseRotation * Quaternion.Euler(_currentPitch, _currentYaw, 0f);
             _transitionStartMaxH = _activeMaxHorizontalAngle;
             _transitionStartMaxV = _activeMaxVerticalAngle;
 
@@ -351,8 +354,20 @@ namespace LastSignal
                 _shakeTrauma = Mathf.MoveTowards(_shakeTrauma, 0f, shakeDecayPerSecond * dt);
             }
 
-            transform.position = _currentBasePosition + shakePosOffset;
-            transform.rotation = _currentBaseRotation * Quaternion.Euler(_currentPitch, _currentYaw, 0f) * shakeRotOffset;
+            Vector3 pureBasePos = _currentBasePosition;
+            Quaternion pureBaseRot = _currentBaseRotation * Quaternion.Euler(_currentPitch, _currentYaw, 0f);
+
+            Vector3 followPosOffset = Vector3.zero;
+            Quaternion followRotOffset = Quaternion.identity;
+            if (_handFollow == null) _handFollow = GetComponent<CameraHandFollow>();
+            if (_handFollow != null && _handFollow.isActiveAndEnabled)
+            {
+                _handFollow.ComputeAdditiveOffset(pureBasePos, pureBaseRot, dt, out followPosOffset, out followRotOffset);
+            }
+
+            // Single clean composition write to Transform — zero feedback loop possible!
+            transform.position = pureBasePos + shakePosOffset + followPosOffset;
+            transform.rotation = pureBaseRot * shakeRotOffset * followRotOffset;
         }
 
         /// <summary>
