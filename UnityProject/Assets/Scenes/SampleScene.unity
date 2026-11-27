@@ -8203,6 +8203,8 @@ MonoBehaviour:
   flagsState: {fileID: 660955255}
   subscribersPage: {fileID: 8948636510511134010}
   spreadController: {fileID: 6668954506755576631}
+  keroseneLampFlicker: {fileID: 1522202834}
+  deskClock: {fileID: 4642264296058986121}
   night2CeilingCrack: {fileID: 3622489577524886723}
   mapBerezaCrossVisual: {fileID: 1167155832}
   kerosenePointLight: {fileID: 1541549382}
@@ -8210,8 +8212,15 @@ MonoBehaviour:
   emergencyRedLight: {fileID: 1407359555}
   ceilingDustParticles: {fileID: 682515560}
   frontAudioSource: {fileID: 0}
+  roomAmbientSource: {fileID: 0}
+  customMatchStrikeClip: {fileID: 0}
+  customRoomLampHissClip: {fileID: 0}
+  customWaterDropClip: {fileID: 0}
+  customArtilleryShotClip: {fileID: 0}
   customDistantBoomClip: {fileID: 0}
   customCloseExplosionClip: {fileID: 0}
+  roomAmbientVolume: 0.14
+  waterDropVolume: 0.1
   distantBoomVolume: 0.42
   closeBoomVolume: 0.85
   currentStage: 1
@@ -10109,6 +10118,9 @@ MonoBehaviour:
   - {fileID: 569757481}
   - {fileID: 1867276588}
   - {fileID: 1666286755}
+  relayAudioSource: {fileID: 0}
+  customRelayClickClip: {fileID: 0}
+  relayClickVolume: 0.55
   activeRingingLines: []
   connectedPortsDebug: 
 --- !u!4 &1077225809
@@ -10546,6 +10558,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1248891676}
   - component: {fileID: 1248891677}
+  - component: {fileID: 1248891678}
   m_Layer: 0
   m_Name: NightSessionManager
   m_TagString: Untagged
@@ -10597,6 +10610,23 @@ MonoBehaviour:
   currentClockDisplay: 23:40
   remainingScheduledCallsCount: 0
   nightRunning: 0
+  onNight1CompletedEvent:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &1248891678
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1248891675}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65d77793fa446804fba13ffab594d0bb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastSignal.StoryCore.Night1DebugHelper
+  sessionManager: {fileID: 1248891677}
+  enableFunctionHotkeys: 1
 --- !u!1 &1266325102
 GameObject:
   m_ObjectHideFlags: 0
@@ -12342,14 +12372,19 @@ MonoBehaviour:
   subtitleUI: {fileID: 1827840793}
   roomAtmosphere: {fileID: 703523480}
   radioSignalMixer: {fileID: 162696538}
+  deskClock: {fileID: 4642264296058986121}
   bookInspect: {fileID: 6668954506755576630}
+  letterInteraction: {fileID: 115572965}
   subscribersPage: {fileID: 8948636510511134010}
   notesPage: {fileID: 8308290988567513104}
   pencilAnimator: {fileID: 7712617375345533464}
   spreadController: {fileID: 6668954506755576631}
   voiceAudioSource: {fileID: 1321549386}
   callerAmbientSource: {fileID: 2045629245}
+  secondaryAmbientSource: {fileID: 0}
+  climaxSfxSource: {fileID: 0}
   voiceVolume: 0.92
+  readingCharsPerSecond: 26
   activeCall: {fileID: 0}
   activeNodeId: 
   isPausedByDisconnect: 0

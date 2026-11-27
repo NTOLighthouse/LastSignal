@@ -37,6 +37,9 @@ namespace LastSignal.StoryCore
         [SerializeField] private int remainingScheduledCallsCount;
         [SerializeField] private bool nightRunning;
 
+        [Header("События завершения Ночи 1 (для подключения Ночи 2)")]
+        [SerializeField] private UnityEngine.Events.UnityEvent onNight1CompletedEvent = new UnityEngine.Events.UnityEvent();
+
         private readonly List<CallScenarioAsset> _pendingIncomingCalls = new List<CallScenarioAsset>();
         private readonly List<CallScenarioAsset> _availableOutgoingCalls = new List<CallScenarioAsset>();
         private readonly Queue<CallScenarioAsset> _answeredCallQueue = new Queue<CallScenarioAsset>();
@@ -45,12 +48,14 @@ namespace LastSignal.StoryCore
         private float _sequenceCooldownTimer;
         private bool _endingTriggered;
         private Coroutine _transitionCoroutine;
+        private Coroutine _midPauseExplosionCoroutine;
 
         public NightScheduleAsset CurrentSchedule => _currentSchedule;
         public bool IsNightRunning => nightRunning;
 
         public event Action<NightScheduleAsset> OnNightStarted;
         public event Action<NightScheduleAsset> OnNightCompleted;
+        public event Action OnNight1Completed;
         public event Action<EndingType> OnEndingTriggered;
 
         private void OnEnable()
@@ -151,6 +156,12 @@ namespace LastSignal.StoryCore
                 _transitionCoroutine = null;
             }
 
+            if (_midPauseExplosionCoroutine != null)
+            {
+                StopCoroutine(_midPauseExplosionCoroutine);
+                _midPauseExplosionCoroutine = null;
+            }
+
             _endingTriggered = false;
             nightRunning = false;
             activeNightIndex = scheduleIndex;
@@ -197,12 +208,97 @@ namespace LastSignal.StoryCore
 
             if (showOpeningTitleCard && intermissionUI != null && !string.IsNullOrWhiteSpace(_currentSchedule.openingTypewriterText))
             {
+                if (_currentSchedule.nightNumber == 1)
+                {
+                    roomAtmosphere?.PrepareLampUnlitForIntro();
+                }
                 _transitionCoroutine = StartCoroutine(BeginNightAfterOpeningCardRoutine(_currentSchedule));
             }
             else
             {
+                roomAtmosphere?.SetTotalSilence(false);
                 ActivateNightGameplay();
             }
+        }
+
+        /// <summary>
+        /// Отладочный переход напрямую на любой звонок Ночи 1 (индекс 0..5 -> 1.1..1.6).
+        /// Сбрасывает текущие шнуры/титры, настраивает очередь с выбранного звонка и сразу запускает мигание его лампы.
+        /// </summary>
+        public void DebugJumpToNight1Call(int callIndex, bool startAtBerezaClimax = false)
+        {
+            if (nightSchedules == null || nightSchedules.Count == 0 || nightSchedules[0] == null)
+            {
+                Debug.LogWarning("[NightSessionManager] Night_01_Schedule не назначен.", this);
+                return;
+            }
+
+            NightScheduleAsset schedule = nightSchedules[0];
+            if (schedule.calls == null || callIndex < 0 || callIndex >= schedule.calls.Count)
+            {
+                Debug.LogWarning($"[NightSessionManager] Звонок с индексом {callIndex} не найден в Ночи 1.", this);
+                return;
+            }
+
+            if (_transitionCoroutine != null)
+            {
+                StopCoroutine(_transitionCoroutine);
+                _transitionCoroutine = null;
+            }
+
+            if (_midPauseExplosionCoroutine != null)
+            {
+                StopCoroutine(_midPauseExplosionCoroutine);
+                _midPauseExplosionCoroutine = null;
+            }
+
+            _endingTriggered = false;
+            activeNightIndex = 0;
+            _currentSchedule = schedule;
+
+            intermissionUI?.HideImmediate();
+            dialogueRunner?.StopCurrentCall(notifyFinished: false);
+            lineRouter?.ClearAllRingingLines();
+            lineRouter?.ForceReturnAllPlugsHome();
+
+            _pendingIncomingCalls.Clear();
+            _availableOutgoingCalls.Clear();
+            _answeredCallQueue.Clear();
+
+            roomAtmosphere?.ApplyNightStage(NightStage.Night1);
+            roomAtmosphere?.SetTotalSilence(false);
+
+            var lampFlicker = FindFirstObjectByType<KeroseneLampFlicker>();
+            if (lampFlicker != null) lampFlicker.IntensityMultiplier = 1f;
+
+            flagsState?.SetCurrentNight(1);
+            deskClock?.SetClock(schedule.startHour, schedule.startMinute, schedule.gameMinutesPerRealSecond);
+            deskClock?.SetRunning(true);
+
+            // Наполняем очередь звонками, начиная с callIndex.
+            for (int i = callIndex; i < schedule.calls.Count; i++)
+            {
+                CallScenarioAsset c = schedule.calls[i];
+                if (c != null)
+                {
+                    _pendingIncomingCalls.Add(c);
+                }
+            }
+            remainingScheduledCallsCount = _pendingIncomingCalls.Count;
+            nightRunning = true;
+            _sequenceCooldownTimer = 0f;
+
+            if (startAtBerezaClimax && callIndex == schedule.calls.Count - 1)
+            {
+                CallScenarioAsset climaxCall = _pendingIncomingCalls[0];
+                _pendingIncomingCalls.RemoveAt(0);
+                remainingScheduledCallsCount = _pendingIncomingCalls.Count;
+                dialogueRunner?.StartCall(climaxCall, startFromNodeId: "bereza_climax");
+                return;
+            }
+
+            // Немедленно начинаем мигание целевой лампы.
+            TryDispatchScheduledCalls();
         }
 
         /// <summary>
@@ -232,7 +328,16 @@ namespace LastSignal.StoryCore
         private IEnumerator BeginNightAfterOpeningCardRoutine(NightScheduleAsset schedule)
         {
             bool finished = false;
-            intermissionUI.ShowTypewriterCard(schedule.openingTypewriterText, schedule.openingCardDuration, () => finished = true);
+            Action onBeforeFade = schedule.nightNumber == 1
+                ? () => roomAtmosphere?.PlayMatchStrikeAndIgniteLamp()
+                : null;
+
+            intermissionUI.ShowTypewriterCard(
+                schedule.openingTypewriterText,
+                schedule.openingCardDuration,
+                () => finished = true,
+                onBeforeFadeOut: onBeforeFade);
+
             while (!finished)
             {
                 yield return null;
@@ -245,7 +350,7 @@ namespace LastSignal.StoryCore
         private void ActivateNightGameplay()
         {
             nightRunning = true;
-            _sequenceCooldownTimer = 0.5f;
+            _sequenceCooldownTimer = (_currentSchedule != null && _currentSchedule.nightNumber == 1) ? 1.5f : 0.5f;
             deskClock?.SetRunning(true);
             OnNightStarted?.Invoke(_currentSchedule);
         }
@@ -434,8 +539,28 @@ namespace LastSignal.StoryCore
 
         private void HandleCallFinished(CallScenarioAsset call, bool hungUpEarly)
         {
-            _sequenceCooldownTimer = call != null ? Mathf.Max(0.5f, call.delayBeforeRingingSeconds) : 1.0f;
+            float pause = call != null
+                ? (call.postCallPauseSeconds > 0.01f ? call.postCallPauseSeconds : Mathf.Max(0.5f, call.delayBeforeRingingSeconds))
+                : 1.0f;
+            _sequenceCooldownTimer = pause;
+
+            if (call != null && call.distantExplosionMidPostCallPause && roomAtmosphere != null)
+            {
+                if (_midPauseExplosionCoroutine != null)
+                {
+                    StopCoroutine(_midPauseExplosionCoroutine);
+                }
+                _midPauseExplosionCoroutine = StartCoroutine(PlayMidPauseDistantBoomRoutine(pause * 0.5f));
+            }
+
             TryStartNextQueuedDialogue();
+        }
+
+        private IEnumerator PlayMidPauseDistantBoomRoutine(float delaySeconds)
+        {
+            yield return new WaitForSeconds(Mathf.Max(0.4f, delaySeconds));
+            roomAtmosphere?.TriggerSubtleDistantBoom(dustCount: 6f);
+            _midPauseExplosionCoroutine = null;
         }
 
         private void TryStartNextQueuedDialogue()
@@ -471,10 +596,19 @@ namespace LastSignal.StoryCore
 
         private IEnumerator FinishNightAndAdvanceRoutine(NightScheduleAsset finishedSchedule)
         {
+            int nextIndex = activeNightIndex + 1;
+            bool hasNextNight = nextIndex < nightSchedules.Count && nightSchedules[nextIndex] != null;
+
             if (intermissionUI != null && !string.IsNullOrWhiteSpace(finishedSchedule.closingTypewriterText))
             {
                 bool done = false;
-                intermissionUI.ShowTypewriterCard(finishedSchedule.closingTypewriterText, finishedSchedule.closingCardDuration, () => done = true);
+                intermissionUI.ShowNightClosingCard(
+                    finishedSchedule.closingTypewriterText,
+                    finishedSchedule.closingSubtitleText,
+                    finishedSchedule.closingSubtitleDelay,
+                    finishedSchedule.closingCardDuration,
+                    fadeOutAtEnd: hasNextNight,
+                    onFinished: () => done = true);
                 while (!done)
                 {
                     yield return null;
@@ -483,8 +617,13 @@ namespace LastSignal.StoryCore
 
             _transitionCoroutine = null;
 
-            int nextIndex = activeNightIndex + 1;
-            if (nextIndex < nightSchedules.Count && nightSchedules[nextIndex] != null)
+            if (finishedSchedule != null && finishedSchedule.nightNumber == 1)
+            {
+                OnNight1Completed?.Invoke();
+                onNight1CompletedEvent?.Invoke();
+            }
+
+            if (hasNextNight)
             {
                 StartNight(nextIndex);
             }

@@ -25,6 +25,11 @@ namespace LastSignal.StoryCore
         [SerializeField] private SwitchboardInteractor interactor;
         [SerializeField] private List<PortIndicator> portIndicators = new List<PortIndicator>();
 
+        [Header("Звук реле коммутатора")]
+        [SerializeField] private AudioSource relayAudioSource;
+        [SerializeField] private AudioClip customRelayClickClip;
+        [SerializeField, Range(0f, 1f)] private float relayClickVolume = 0.55f;
+
         [Header("Живое состояние линий (только чтение в Inspector)")]
         [SerializeField] private List<RingingLineInfo> activeRingingLines = new List<RingingLineInfo>();
         [SerializeField] private List<SubscriberId> connectedPortsDebug = new List<SubscriberId>();
@@ -33,10 +38,12 @@ namespace LastSignal.StoryCore
         private readonly HashSet<int> _connectedPortIds = new HashSet<int>();
         private readonly HashSet<int> _damagedPortIds = new HashSet<int>();
         private readonly HashSet<int> _pausedHoldPortIds = new HashSet<int>();
+        private readonly HashSet<int> _remoteHungUpPortIds = new HashSet<int>();
         private readonly List<RingingLineInfo> _expiredBuffer = new List<RingingLineInfo>();
         private bool _blackoutActive;
 
         public int RingingCount => activeRingingLines.Count;
+        public int ConnectedPortCount => _connectedPortIds.Count;
         public IReadOnlyList<RingingLineInfo> RingingLines => activeRingingLines;
 
         /// <summary>Игрок ответил на мигающий входящий звонок (воткнул шнур в его гнездо).</summary>
@@ -62,6 +69,7 @@ namespace LastSignal.StoryCore
             }
 
             CollectIndicatorsIfNeeded();
+            EnsureRelayAudio();
             TurnOffAllIndicators();
         }
 
@@ -128,6 +136,83 @@ namespace LastSignal.StoryCore
         }
 
         /// <summary>
+        /// Возвращает true, когда ни один штекер не воткнут в гнездо и ни один не удерживается в руке.
+        /// </summary>
+        public bool AreAllPlugsAtBase()
+        {
+            if (_connectedPortIds.Count > 0)
+            {
+                return false;
+            }
+
+            if (interactor != null && interactor.ActivePlug != null)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Воспроизводит одиночный щелчок реле коммутатора.
+        /// </summary>
+        public void PlayRelayClick(float pitchMin = 0.94f, float pitchMax = 1.06f)
+        {
+            EnsureRelayAudio();
+            if (relayAudioSource == null) return;
+            AudioClip clip = customRelayClickClip != null ? customRelayClickClip : ProceduralRadioAudio.GetRelayClick();
+            if (clip != null)
+            {
+                relayAudioSource.pitch = UnityEngine.Random.Range(pitchMin, pitchMax);
+                relayAudioSource.PlayOneShot(clip, relayClickVolume);
+            }
+        }
+
+        /// <summary>
+        /// Помечает линию как завершённую со стороны абонента (щелчок реле, лампа гаснет даже пока штекер ещё в гнезде).
+        /// Сбрасывается автоматически, когда игрок вытаскивает штекер.
+        /// </summary>
+        public void SetPortRemoteHangUp(SubscriberId port, bool hungUp, bool playClick = true)
+        {
+            if (port == SubscriberId.None) return;
+            int id = (int)port;
+            if (hungUp)
+            {
+                _remoteHungUpPortIds.Add(id);
+                _pausedHoldPortIds.Remove(id);
+                if (playClick) PlayRelayClick(0.86f, 0.95f);
+            }
+            else
+            {
+                _remoteHungUpPortIds.Remove(id);
+            }
+
+            RefreshLampForPort(id);
+        }
+
+        /// <summary>
+        /// Мягко возвращает все штекеры на базу (используется отладочным телепортом F1–F6).
+        /// </summary>
+        public void ForceReturnAllPlugsHome()
+        {
+            SwitchboardPlug[] allPlugs = FindObjectsByType<SwitchboardPlug>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < allPlugs.Length; i++)
+            {
+                if (allPlugs[i] != null)
+                {
+                    allPlugs[i].ReturnHome();
+                }
+            }
+
+            _connectedPortIds.Clear();
+            _pausedHoldPortIds.Clear();
+            _remoteHungUpPortIds.Clear();
+            _blackoutActive = false;
+            SyncConnectedDebugList();
+            RefreshAllLamps();
+        }
+
+        /// <summary>
         /// Запускает мигание лампы входящего вызова на указанном порту.
         /// Если штекер уже вставлен в этот порт — немедленно отвечает на вызов.
         /// </summary>
@@ -161,6 +246,8 @@ namespace LastSignal.StoryCore
             };
 
             activeRingingLines.Add(info);
+            _remoteHungUpPortIds.Remove(portId);
+            PlayRelayClick(0.98f, 1.08f);
             RefreshLampForPort(portId);
             return true;
         }
@@ -179,6 +266,7 @@ namespace LastSignal.StoryCore
         {
             activeRingingLines.Clear();
             _pausedHoldPortIds.Clear();
+            _remoteHungUpPortIds.Clear();
             RefreshAllLamps();
         }
 
@@ -234,12 +322,23 @@ namespace LastSignal.StoryCore
         public void FlashAllAliveLamps()
         {
             _blackoutActive = false;
+            _remoteHungUpPortIds.Clear();
+            StartCoroutine(RelayClickFlurryRoutine());
             foreach (var kv in _indicatorByPortId)
             {
                 if (kv.Value != null)
                 {
                     kv.Value.SetState(_damagedPortIds.Contains(kv.Key) ? IndicatorState.Off : IndicatorState.Blinking);
                 }
+            }
+        }
+
+        private System.Collections.IEnumerator RelayClickFlurryRoutine()
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                PlayRelayClick(0.92f + i * 0.025f, 1.02f + i * 0.03f);
+                yield return new WaitForSecondsRealtime(0.055f);
             }
         }
 
@@ -254,6 +353,7 @@ namespace LastSignal.StoryCore
         private void HandlePortConnected(int portId)
         {
             _connectedPortIds.Add(portId);
+            _remoteHungUpPortIds.Remove(portId);
             SyncConnectedDebugList();
 
             SubscriberId subscriber = SubscriberIdUtility.FromPortId(portId);
@@ -277,6 +377,7 @@ namespace LastSignal.StoryCore
         private void HandlePortDisconnected(int portId)
         {
             _connectedPortIds.Remove(portId);
+            _remoteHungUpPortIds.Remove(portId);
             SyncConnectedDebugList();
             RefreshLampForPort(portId);
 
@@ -291,7 +392,7 @@ namespace LastSignal.StoryCore
                 return;
             }
 
-            if (_blackoutActive || _damagedPortIds.Contains(portId))
+            if (_blackoutActive || _damagedPortIds.Contains(portId) || _remoteHungUpPortIds.Contains(portId))
             {
                 indicator.SetState(IndicatorState.Off);
                 return;
@@ -306,6 +407,21 @@ namespace LastSignal.StoryCore
             SubscriberId sub = SubscriberIdUtility.FromPortId(portId);
             bool shouldBlink = IsPortRinging(sub) || _pausedHoldPortIds.Contains(portId);
             indicator.SetState(shouldBlink ? IndicatorState.Blinking : IndicatorState.Off);
+        }
+
+        private void EnsureRelayAudio()
+        {
+            if (relayAudioSource == null)
+            {
+                relayAudioSource = GetComponent<AudioSource>();
+            }
+            if (relayAudioSource == null)
+            {
+                relayAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+            relayAudioSource.playOnAwake = false;
+            relayAudioSource.loop = false;
+            relayAudioSource.spatialBlend = 0f;
         }
 
         private int FindRingingIndex(SubscriberId port)

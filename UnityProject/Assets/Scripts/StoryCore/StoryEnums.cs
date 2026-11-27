@@ -73,7 +73,26 @@ namespace LastSignal.StoryCore
         WaitClickSubscriberInBook = 2,
         WaitConnectPort = 3,
         WaitDisconnectPort = 4,
-        WaitTuneRadio = 5
+        WaitTuneRadio = 5,
+        WaitRecordKeywords = 6,
+        WaitAllPlugsDisconnected = 7,
+        WaitFireMissionAssembly = 8
+    }
+
+    /// <summary>
+    /// Процедурный профиль фонового шума линии, используемый если custom AudioClip ещё не назначен.
+    /// </summary>
+    public enum SubscriberAmbientProfile
+    {
+        None = 0,
+        CentralHub = 1,
+        TruckIdleDepot = 2,
+        StaffClockMap = 3,
+        WindDistantShots = 4,
+        ArtilleryBattery = 5,
+        NightForestCrickets = 6,
+        MedSanBat = 7,
+        BridgeWaterMetal = 8
     }
 
     /// <summary>
@@ -88,7 +107,9 @@ namespace LastSignal.StoryCore
         SwitchToEmergencyRed = 4,
         CrossOutBereza = 5,
         OpenReservePasswords = 6,
-        TriggerEnding = 7
+        TriggerEnding = 7,
+        SubtleDistantBoom = 8,
+        ArtilleryShotAndImpact = 9
     }
 
     /// <summary>

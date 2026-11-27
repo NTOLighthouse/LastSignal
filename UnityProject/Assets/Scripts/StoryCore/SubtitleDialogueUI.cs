@@ -61,9 +61,20 @@ namespace LastSignal.StoryCore
         private readonly List<TMP_Text> _spawnedChoiceLabels = new List<TMP_Text>();
 
         private string _lastRawSubtitle = string.Empty;
+        private bool _lastIsItalic;
         private float _targetAlpha;
         private bool _pausedHidden;
         private Canvas _parentCanvas;
+
+        // UI сборки сообщения для «Грома» (Звонок 1.3)
+        private GameObject _fireMissionPanel;
+        private readonly List<(string code, UnityEngine.UI.Button btn, UnityEngine.UI.Image bg, TMP_Text label)> _squareButtons = new List<(string, UnityEngine.UI.Button, UnityEngine.UI.Image, TMP_Text)>();
+        private readonly List<(bool oneShell, UnityEngine.UI.Button btn, UnityEngine.UI.Image bg, TMP_Text label)> _ammoButtons = new List<(bool, UnityEngine.UI.Button, UnityEngine.UI.Image, TMP_Text)>();
+        private UnityEngine.UI.Button _fireMissionSubmitBtn;
+        private UnityEngine.UI.Image _fireMissionSubmitBg;
+        private string _selectedSquareCode;
+        private bool? _selectedOneShell;
+        private Action<string, bool> _onFireMissionSubmitted;
 
         // Текущее состояние посимвольной печати
         private float _bodyRevealProgress;
@@ -86,6 +97,9 @@ namespace LastSignal.StoryCore
         /// <summary>Вызывается при выборе кнопки ответа Ларина (index).</summary>
         public event Action<int> OnChoiceSelected;
 
+        /// <summary>Вызывается при клике по субтитрам, когда строка уже полностью напечатана (для пропуска без озвучки).</summary>
+        public event Action OnSubtitleAdvanceClicked;
+
         private void Awake()
         {
             _parentCanvas = GetComponentInParent<Canvas>();
@@ -98,6 +112,15 @@ namespace LastSignal.StoryCore
             if (subtitleBodyText != null)
             {
                 subtitleBodyText.raycastTarget = true;
+            }
+
+            if (subtitlePanel != null)
+            {
+                UnityEngine.UI.Image backdrop = subtitlePanel.GetComponentInChildren<UnityEngine.UI.Image>(true);
+                if (backdrop != null)
+                {
+                    backdrop.raycastTarget = true;
+                }
             }
 
             HideAll();
@@ -140,9 +163,11 @@ namespace LastSignal.StoryCore
             Color speakerColor,
             string rawSubtitleText,
             Func<string, bool> isKeywordRecorded,
-            float targetRevealDuration = 0f)
+            float targetRevealDuration = 0f,
+            bool isItalic = false)
         {
             _lastRawSubtitle = rawSubtitleText ?? string.Empty;
+            _lastIsItalic = isItalic;
             _targetAlpha = 1f;
 
             if (subtitlePanel != null)
@@ -163,6 +188,24 @@ namespace LastSignal.StoryCore
             }
 
             RenderFormattedSubtitle(isKeywordRecorded, resetTypewriter: true, targetRevealDuration: targetRevealDuration);
+        }
+
+        /// <summary>
+        /// Мгновенно допечатывает текущую строку субтитров целиком.
+        /// </summary>
+        public void CompleteLineRevealImmediate()
+        {
+            if (speakerNameText != null)
+            {
+                _speakerRevealProgress = _speakerTotalChars;
+                speakerNameText.maxVisibleCharacters = _speakerTotalChars;
+            }
+
+            if (subtitleBodyText != null)
+            {
+                _bodyRevealProgress = _bodyTotalChars;
+                subtitleBodyText.maxVisibleCharacters = _bodyTotalChars;
+            }
         }
 
         /// <summary>
@@ -272,13 +315,63 @@ namespace LastSignal.StoryCore
             }
         }
 
+        public void ShowFireMissionAssembly(
+            bool hasSquareInJournal,
+            bool hasAmmoInJournal,
+            Action<string, bool> onSubmitted)
+        {
+            EnsureFireMissionPanelBuilt();
+            if (_fireMissionPanel == null)
+            {
+                return;
+            }
+
+            _onFireMissionSubmitted = onSubmitted;
+            _selectedSquareCode = null;
+            _selectedOneShell = null;
+            _targetAlpha = 1f;
+
+            for (int i = 0; i < _squareButtons.Count; i++)
+            {
+                var item = _squareButtons[i];
+                bool inJournal = item.code == "16-Б" && hasSquareInJournal;
+                item.label.text = inJournal
+                    ? $"{item.code}  <color={keywordRecordedHex}>[в журнале]</color>"
+                    : item.code;
+            }
+
+            for (int i = 0; i < _ammoButtons.Count; i++)
+            {
+                var item = _ammoButtons[i];
+                string baseText = item.oneShell ? "Один снаряд" : "Три снаряда";
+                bool inJournal = item.oneShell && hasAmmoInJournal;
+                item.label.text = inJournal
+                    ? $"{baseText}  <color={keywordRecordedHex}>[в журнале]</color>"
+                    : baseText;
+            }
+
+            RefreshFireMissionVisuals();
+            _fireMissionPanel.SetActive(true);
+        }
+
+        public void HideFireMissionAssembly()
+        {
+            _onFireMissionSubmitted = null;
+            if (_fireMissionPanel != null)
+            {
+                _fireMissionPanel.SetActive(false);
+            }
+        }
+
         public void HideAll()
         {
             _targetAlpha = 0f;
             _pausedHidden = false;
             _lastRawSubtitle = string.Empty;
+            _lastIsItalic = false;
             _currentLineKeywords.Clear();
             HideChoices();
+            HideFireMissionAssembly();
             HideActionHint();
 
             if (subtitlePanel != null)
@@ -289,29 +382,55 @@ namespace LastSignal.StoryCore
 
         public void OnPointerClick(PointerEventData eventData)
         {
-            if (_pausedHidden || subtitleBodyText == null || _currentLineKeywords.Count == 0)
+            if (_pausedHidden || subtitleBodyText == null)
             {
                 return;
             }
 
-            Camera uiCamera = (_parentCanvas != null && _parentCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
-                ? _parentCanvas.worldCamera
-                : null;
-
-            int linkIndex = TMP_TextUtilities.FindIntersectingLink(subtitleBodyText, eventData.position, uiCamera);
-            if (linkIndex < 0)
+            // Не перехватываем клики по кнопкам выборов или панели сборки сообщения.
+            GameObject hitGo = eventData.pointerCurrentRaycast.gameObject;
+            if (hitGo != null)
             {
-                return;
+                if (choicesContainer != null && hitGo.transform.IsChildOf(choicesContainer))
+                {
+                    return;
+                }
+                if (_fireMissionPanel != null && hitGo.transform.IsChildOf(_fireMissionPanel.transform))
+                {
+                    return;
+                }
             }
 
-            TMP_LinkInfo linkInfo = subtitleBodyText.textInfo.linkInfo[linkIndex];
-            string keywordId = linkInfo.GetLinkID();
-            if (!string.IsNullOrEmpty(keywordId))
+            if (_currentLineKeywords.Count > 0)
             {
-                string display = _currentLineKeywords.TryGetValue(keywordId, out string cached)
-                    ? cached
-                    : linkInfo.GetLinkText();
-                OnKeywordClicked?.Invoke(keywordId, display);
+                Camera uiCamera = (_parentCanvas != null && _parentCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                    ? _parentCanvas.worldCamera
+                    : null;
+
+                int linkIndex = TMP_TextUtilities.FindIntersectingLink(subtitleBodyText, eventData.position, uiCamera);
+                if (linkIndex >= 0)
+                {
+                    TMP_LinkInfo linkInfo = subtitleBodyText.textInfo.linkInfo[linkIndex];
+                    string keywordId = linkInfo.GetLinkID();
+                    if (!string.IsNullOrEmpty(keywordId))
+                    {
+                        string display = _currentLineKeywords.TryGetValue(keywordId, out string cached)
+                            ? cached
+                            : linkInfo.GetLinkText();
+                        OnKeywordClicked?.Invoke(keywordId, display);
+                    }
+                    return;
+                }
+            }
+
+            // Клик по самой строке субтитров: 1-й клик мгновенно допечатывает, 2-й пропускает строку без озвучки.
+            if (!IsLineRevealFinished)
+            {
+                CompleteLineRevealImmediate();
+            }
+            else
+            {
+                OnSubtitleAdvanceClicked?.Invoke();
             }
         }
 
@@ -374,7 +493,7 @@ namespace LastSignal.StoryCore
             });
 
             bool wasComplete = !resetTypewriter && _bodyRevealProgress >= _bodyTotalChars;
-            subtitleBodyText.text = formatted;
+            subtitleBodyText.text = _lastIsItalic ? $"<i>{formatted}</i>" : formatted;
             subtitleBodyText.ForceMeshUpdate();
             _bodyTotalChars = subtitleBodyText.textInfo.characterCount;
 
@@ -401,6 +520,200 @@ namespace LastSignal.StoryCore
             {
                 subtitleBodyText.maxVisibleCharacters = Mathf.Clamp(Mathf.CeilToInt(_bodyRevealProgress), 0, _bodyTotalChars);
             }
+        }
+
+        private void EnsureFireMissionPanelBuilt()
+        {
+            if (_fireMissionPanel != null)
+            {
+                return;
+            }
+
+            TMP_FontAsset font = subtitleBodyText != null ? subtitleBodyText.font : TMP_Settings.defaultFontAsset;
+
+            _fireMissionPanel = new GameObject("FireMissionAssemblyPanel", typeof(RectTransform), typeof(UnityEngine.UI.Image), typeof(UnityEngine.UI.VerticalLayoutGroup), typeof(UnityEngine.UI.LayoutElement));
+            _fireMissionPanel.transform.SetParent(transform, false);
+            _fireMissionPanel.transform.SetAsFirstSibling();
+
+            var panelBg = _fireMissionPanel.GetComponent<UnityEngine.UI.Image>();
+            panelBg.color = new Color(0.06f, 0.055f, 0.05f, 0.86f);
+            panelBg.raycastTarget = true;
+
+            var vlg = _fireMissionPanel.GetComponent<UnityEngine.UI.VerticalLayoutGroup>();
+            vlg.padding = new RectOffset(20, 20, 14, 14);
+            vlg.spacing = 10f;
+            vlg.childAlignment = TextAnchor.MiddleCenter;
+            vlg.childControlWidth = true;
+            vlg.childControlHeight = true;
+            vlg.childForceExpandWidth = true;
+            vlg.childForceExpandHeight = false;
+
+            var le = _fireMissionPanel.GetComponent<UnityEngine.UI.LayoutElement>();
+            le.preferredWidth = 760f;
+
+            CreateAssemblyHeader(_fireMissionPanel.transform, "ПЕРЕДАЧА КООРДИНАТ «ГРОМУ»", font);
+
+            Transform sqRow = CreateAssemblyRow(_fireMissionPanel.transform, "КВАДРАТ:", font);
+            string[] squares = { "16-Б", "16-В", "15-Б" };
+            _squareButtons.Clear();
+            for (int i = 0; i < squares.Length; i++)
+            {
+                string sq = squares[i];
+                CreateOptionButton(sqRow, sq, font, out UnityEngine.UI.Button btn, out UnityEngine.UI.Image bg, out TMP_Text lbl);
+                btn.onClick.AddListener(() =>
+                {
+                    _selectedSquareCode = sq;
+                    RefreshFireMissionVisuals();
+                });
+                _squareButtons.Add((sq, btn, bg, lbl));
+            }
+
+            Transform ammoRow = CreateAssemblyRow(_fireMissionPanel.transform, "РАСХОД:", font);
+            _ammoButtons.Clear();
+            CreateOptionButton(ammoRow, "Один снаряд", font, out UnityEngine.UI.Button btnOne, out UnityEngine.UI.Image bgOne, out TMP_Text lblOne);
+            btnOne.onClick.AddListener(() =>
+            {
+                _selectedOneShell = true;
+                RefreshFireMissionVisuals();
+            });
+            _ammoButtons.Add((true, btnOne, bgOne, lblOne));
+
+            CreateOptionButton(ammoRow, "Три снаряда", font, out UnityEngine.UI.Button btnThree, out UnityEngine.UI.Image bgThree, out TMP_Text lblThree);
+            btnThree.onClick.AddListener(() =>
+            {
+                _selectedOneShell = false;
+                RefreshFireMissionVisuals();
+            });
+            _ammoButtons.Add((false, btnThree, bgThree, lblThree));
+
+            CreateOptionButton(_fireMissionPanel.transform, "Передать Грому", font, out _fireMissionSubmitBtn, out _fireMissionSubmitBg, out TMP_Text submitLbl, minHeight: 42f);
+            submitLbl.fontStyle = FontStyles.Bold;
+            _fireMissionSubmitBtn.onClick.AddListener(() =>
+            {
+                if (!string.IsNullOrEmpty(_selectedSquareCode) && _selectedOneShell.HasValue)
+                {
+                    string sq = _selectedSquareCode;
+                    bool one = _selectedOneShell.Value;
+                    Action<string, bool> cb = _onFireMissionSubmitted;
+                    HideFireMissionAssembly();
+                    cb?.Invoke(sq, one);
+                }
+            });
+
+            _fireMissionPanel.SetActive(false);
+        }
+
+        private void RefreshFireMissionVisuals()
+        {
+            Color normalBg = new Color(0.16f, 0.14f, 0.12f, 0.92f);
+            Color selectedBg = new Color(0.42f, 0.31f, 0.14f, 0.98f);
+
+            for (int i = 0; i < _squareButtons.Count; i++)
+            {
+                var item = _squareButtons[i];
+                item.bg.color = item.code == _selectedSquareCode ? selectedBg : normalBg;
+            }
+
+            for (int i = 0; i < _ammoButtons.Count; i++)
+            {
+                var item = _ammoButtons[i];
+                bool selected = _selectedOneShell.HasValue && _selectedOneShell.Value == item.oneShell;
+                item.bg.color = selected ? selectedBg : normalBg;
+            }
+
+            bool ready = !string.IsNullOrEmpty(_selectedSquareCode) && _selectedOneShell.HasValue;
+            if (_fireMissionSubmitBtn != null)
+            {
+                _fireMissionSubmitBtn.interactable = ready;
+            }
+            if (_fireMissionSubmitBg != null)
+            {
+                _fireMissionSubmitBg.color = ready
+                    ? new Color(0.55f, 0.39f, 0.16f, 0.98f)
+                    : new Color(0.14f, 0.13f, 0.12f, 0.65f);
+            }
+        }
+
+        private static void CreateAssemblyHeader(Transform parent, string title, TMP_FontAsset font)
+        {
+            GameObject go = new GameObject("Header", typeof(RectTransform), typeof(TextMeshProUGUI));
+            go.transform.SetParent(parent, false);
+            var tmp = go.GetComponent<TextMeshProUGUI>();
+            tmp.font = font;
+            tmp.text = title;
+            tmp.fontSize = 18f;
+            tmp.fontStyle = FontStyles.Bold;
+            tmp.color = new Color(0.95f, 0.78f, 0.44f, 1f);
+            tmp.alignment = TextAlignmentOptions.Center;
+        }
+
+        private static Transform CreateAssemblyRow(Transform parent, string rowTitle, TMP_FontAsset font)
+        {
+            GameObject row = new GameObject($"Row_{rowTitle}", typeof(RectTransform), typeof(UnityEngine.UI.HorizontalLayoutGroup));
+            row.transform.SetParent(parent, false);
+            var hlg = row.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>();
+            hlg.spacing = 10f;
+            hlg.childAlignment = TextAnchor.MiddleLeft;
+            hlg.childControlWidth = true;
+            hlg.childControlHeight = true;
+            hlg.childForceExpandWidth = true;
+            hlg.childForceExpandHeight = false;
+
+            GameObject lblGo = new GameObject("RowLabel", typeof(RectTransform), typeof(TextMeshProUGUI), typeof(UnityEngine.UI.LayoutElement));
+            lblGo.transform.SetParent(row.transform, false);
+            var tmp = lblGo.GetComponent<TextMeshProUGUI>();
+            tmp.font = font;
+            tmp.text = rowTitle;
+            tmp.fontSize = 18f;
+            tmp.color = new Color(0.84f, 0.78f, 0.68f, 1f);
+            tmp.alignment = TextAlignmentOptions.MidlineLeft;
+            var le = lblGo.GetComponent<UnityEngine.UI.LayoutElement>();
+            le.minWidth = 115f;
+            le.preferredWidth = 115f;
+            le.flexibleWidth = 0f;
+
+            return row.transform;
+        }
+
+        private static void CreateOptionButton(
+            Transform parent,
+            string text,
+            TMP_FontAsset font,
+            out UnityEngine.UI.Button button,
+            out UnityEngine.UI.Image background,
+            out TMP_Text label,
+            float minHeight = 36f)
+        {
+            GameObject go = new GameObject($"Btn_{text}", typeof(RectTransform), typeof(UnityEngine.UI.Image), typeof(UnityEngine.UI.Button), typeof(UnityEngine.UI.LayoutElement));
+            go.transform.SetParent(parent, false);
+
+            background = go.GetComponent<UnityEngine.UI.Image>();
+            background.color = new Color(0.16f, 0.14f, 0.12f, 0.92f);
+
+            button = go.GetComponent<UnityEngine.UI.Button>();
+            button.targetGraphic = background;
+
+            var le = go.GetComponent<UnityEngine.UI.LayoutElement>();
+            le.minHeight = minHeight;
+            le.preferredHeight = minHeight;
+            le.flexibleWidth = 1f;
+
+            GameObject lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            lblGo.transform.SetParent(go.transform, false);
+            var lblRt = lblGo.GetComponent<RectTransform>();
+            lblRt.anchorMin = Vector2.zero;
+            lblRt.anchorMax = Vector2.one;
+            lblRt.offsetMin = new Vector2(8f, 4f);
+            lblRt.offsetMax = new Vector2(-8f, -4f);
+
+            var tmp = lblGo.GetComponent<TextMeshProUGUI>();
+            tmp.font = font;
+            tmp.text = text;
+            tmp.fontSize = 18f;
+            tmp.color = new Color(0.96f, 0.91f, 0.80f, 1f);
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.raycastTarget = false;
+            label = tmp;
         }
     }
 }

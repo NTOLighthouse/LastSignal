@@ -40,6 +40,9 @@ namespace LastSignal.StoryCore
         public int CurrentMinute => Mathf.FloorToInt(Mathf.Repeat(_totalGameMinutes, 60f));
         public string FormattedTime => $"{CurrentHour:00}:{CurrentMinute:00}";
 
+        /// <summary>Временно отключает звук тиканья часов (например, 10 секунд полной тишины в финале Ночи 1).</summary>
+        public bool SilenceTick { get; set; }
+
         private void Awake()
         {
             _totalGameMinutes = startHour * 60f + startMinute;
@@ -67,7 +70,7 @@ namespace LastSignal.StoryCore
             if (currentSec != _lastSecondTick)
             {
                 _lastSecondTick = currentSec;
-                if (enableSoftTick && tickAudioSource != null && _tickClip != null)
+                if (enableSoftTick && !SilenceTick && tickAudioSource != null && _tickClip != null)
                 {
                     tickAudioSource.pitch = (currentSec % 2 == 0) ? 1.0f : 0.92f;
                     tickAudioSource.PlayOneShot(_tickClip, tickVolume);

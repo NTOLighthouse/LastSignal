@@ -1,0 +1,377 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49918525faac31e4fa82ea69d673a9d3, type: 3}
+  m_Name: Call_1_3_Yozh_Grom
+  m_EditorClassIdentifier: Assembly-CSharp::LastSignal.StoryCore.CallScenarioAsset
+  callId: 1.3
+  callTitle: "1.3. \xAB\u0401\u0436\xBB \u0432\u044B\u0437\u044B\u0432\u0430\u0435\u0442
+    \u043E\u0433\u043E\u043D\u044C. \u041F\u0435\u0440\u0435\u0434\u0430\u0447\u0430
+    \u043A\u043E\u043E\u0440\u0434\u0438\u043D\u0430\u0442"
+  nightNumber: 1
+  subscriberPort: 5
+  isPlayerInitiatedOutgoing: 0
+  callerAmbientLoop: {fileID: 0}
+  proceduralAmbientProfile: 4
+  callerAmbientVolume: 0.24
+  scheduledHour: 23
+  scheduledMinute: 52
+  startImmediatelyInSequence: 1
+  delayBeforeRingingSeconds: 3.5
+  postCallPauseSeconds: 3.5
+  distantExplosionMidPostCallPause: 0
+  patienceOverrideSeconds: -1
+  requiredFlag: 0
+  forbiddenFlag: 0
+  requiredCompletedCallId: 
+  requiresRadioTuning: 0
+  targetRadioFrequency01: 0.65
+  radioTuningTolerance: 0.09
+  pauseAndResumeOnDisconnect: 1
+  treatHangUpAsRefusal: 0
+  flagOnHangUp: 0
+  flagOnHangUpValue: 0
+  entryNodeId: n01_kostrov_call
+  nodes:
+  - nodeId: n01_kostrov_call
+    speakerName: "\u041A\u041E\u0421\u0422\u0420\u041E\u0412 (\xAB\u0401\u0436\xBB)"
+    speakerColor: {r: 0.76, g: 0.9, b: 0.64, a: 1}
+    isItalic: 0
+    subtitleText: "\u041C\u0430\u044F\u043A, \u041C\u0430\u044F\u043A, \u0401\u0436
+      \u043D\u0430 \u0441\u0432\u044F\u0437\u0438! \u041B\u0435\u0439\u0442\u0435\u043D\u0430\u043D\u0442
+      \u041A\u043E\u0441\u0442\u0440\u043E\u0432, \u0432\u044B\u0441\u043E\u0442\u0430
+      \u0434\u0432\u0435\u0441\u0442\u0438 \u0447\u0435\u0442\u044B\u0440\u043D\u0430\u0434\u0446\u0430\u0442\u044C.
+      \u0413\u0440\u043E\u043C \u043C\u043D\u0435 \u043D\u0435 \u043E\u0442\u0432\u0435\u0447\u0430\u0435\u0442,
+      \u0443 \u043D\u0438\u0445, \u043D\u0430\u0432\u0435\u0440\u043D\u043E\u0435,
+      \u043E\u043F\u044F\u0442\u044C \u0443\u0448\u0438 \u0437\u0430\u043B\u043E\u0436\u0438\u043B\u043E.
+      \u041F\u0435\u0440\u0435\u0434\u0430\u0439 \u0438\u043C: \u043F\u0440\u0438\u0441\u0442\u0440\u0435\u043B\u043E\u0447\u043D\u044B\u0439,
+      \u043A\u0432\u0430\u0434\u0440\u0430\u0442 [\u0448\u0435\u0441\u0442\u043D\u0430\u0434\u0446\u0430\u0442\u044C-\u0411|sq_16b],
+      [\u043E\u0434\u0438\u043D \u0441\u043D\u0430\u0440\u044F\u0434|ammo_1]. \u041A\u0430\u043A
+      \u043F\u043E\u043D\u044F\u043B?"
+    voiceClip: {fileID: 0}
+    fallbackDuration: 0
+    postLineDelay: 0.1
+    conditionRequiredFlag: 0
+    conditionForbiddenFlag: 0
+    skipToNodeId: 
+    waitAction: 6
+    expectedSubscriber: 0
+    requiredKeywordIds:
+    - sq_16b
+    - ammo_1
+    actionHintText: "\u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u043D\u0430 \u043E\u0431\u0430
+      \u043F\u043E\u0434\u0441\u0432\u0435\u0447\u0435\u043D\u043D\u044B\u0445 \u0441\u043B\u043E\u0432\u0430
+      \u0432 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0430\u0445, \u0447\u0442\u043E\u0431\u044B
+      \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u0438\u0445 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B"
+    wrongPortHintText: 
+    secondaryAmbientProfile: 0
+    secondaryAmbientClip: {fileID: 0}
+    secondaryAmbientVolume: 0.28
+    remoteHangUpPorts: 
+    hangUpPrimaryLine: 0
+    stopSecondaryAmbient: 0
+    fireMissionSuccessNodeId: 
+    fireMissionFailureNodeId: 
+    fireMissionVoiceVariants: []
+    berezaClimax:
+      enabled: 0
+      shellWhistleClip: {fileID: 0}
+      impactAndCrackleClip: {fileID: 0}
+      deminCutOffClip: {fileID: 0}
+      whiteNoiseClip: {fileID: 0}
+      whistleDuration: 1.1
+      whiteNoiseDuration: 1.7
+      absoluteSilenceDuration: 10
+      allLampsBlinkDuration: 3
+    logbookNoteToAdd: 
+    flagToSet: 0
+    flagValue: 1
+    roomEffect: 0
+    endingToTrigger: 0
+    choices: []
+    autoNextNodeId: n02_wait_grom
+  - nodeId: n02_wait_grom
+    speakerName: 
+    speakerColor: {r: 0.96, g: 0.78, b: 0.44, a: 1}
+    isItalic: 0
+    subtitleText: 
+    voiceClip: {fileID: 0}
+    fallbackDuration: 0
+    postLineDelay: 0.1
+    conditionRequiredFlag: 0
+    conditionForbiddenFlag: 0
+    skipToNodeId: 
+    waitAction: 3
+    expectedSubscriber: 4
+    requiredKeywordIds: []
+    actionHintText: "\u0412\u044B\u0437\u043E\u0432\u0438\u0442\u0435 \xAB\u0413\u0440\u043E\u043C\xBB
+      (\u0432\u0442\u043E\u0440\u043E\u0439 \u0448\u043D\u0443\u0440 \u0432 \u0433\u043D\u0435\u0437\u0434\u043E
+      \xAB\u0413\u0440\u043E\u043C\xBB)"
+    wrongPortHintText: "\u041D\u0443\u0436\u043D\u043E \u0432\u044B\u0437\u0432\u0430\u0442\u044C
+      \xAB\u0413\u0440\u043E\u043C\xBB"
+    secondaryAmbientProfile: 5
+    secondaryAmbientClip: {fileID: 0}
+    secondaryAmbientVolume: 0.25
+    remoteHangUpPorts: 
+    hangUpPrimaryLine: 0
+    stopSecondaryAmbient: 0
+    fireMissionSuccessNodeId: 
+    fireMissionFailureNodeId: 
+    fireMissionVoiceVariants: []
+    berezaClimax:
+      enabled: 0
+      shellWhistleClip: {fileID: 0}
+      impactAndCrackleClip: {fileID: 0}
+      deminCutOffClip: {fileID: 0}
+      whiteNoiseClip: {fileID: 0}
+      whistleDuration: 1.1
+      whiteNoiseDuration: 1.7
+      absoluteSilenceDuration: 10
+      allLampsBlinkDuration: 3
+    logbookNoteToAdd: 
+    flagToSet: 0
+    flagValue: 1
+    roomEffect: 0
+    endingToTrigger: 0
+    choices: []
+    autoNextNodeId: n03_zharov_hello
+  - nodeId: n03_zharov_hello
+    speakerName: "\u0416\u0410\u0420\u041E\u0412 (\xAB\u0413\u0440\u043E\u043C\xBB)"
+    speakerColor: {r: 0.95, g: 0.64, b: 0.36, a: 1}
+    isItalic: 0
+    subtitleText: "\u0413\u0420\u041E\u041C \u0421\u041B\u0423\u0428\u0410\u0415\u0422!
+      \u0413\u043E\u0432\u043E\u0440\u0438 \u0433\u0440\u043E\u043C\u0447\u0435,
+      \u044F \u043A\u043E\u043D\u0442\u0443\u0436\u0435\u043D\u043D\u044B\u0439!"
+    voiceClip: {fileID: 0}
+    fallbackDuration: 0
+    postLineDelay: 0.35
+    conditionRequiredFlag: 0
+    conditionForbiddenFlag: 0
+    skipToNodeId: 
+    waitAction: 8
+    expectedSubscriber: 0
+    requiredKeywordIds: []
+    actionHintText: 
+    wrongPortHintText: 
+    secondaryAmbientProfile: 0
+    secondaryAmbientClip: {fileID: 0}
+    secondaryAmbientVolume: 0.28
+    remoteHangUpPorts: 
+    hangUpPrimaryLine: 0
+    stopSecondaryAmbient: 0
+    fireMissionSuccessNodeId: n04_kostrov_hit
+    fireMissionFailureNodeId: n05_kostrov_miss
+    fireMissionVoiceVariants:
+    - squareCode: "16-\u0411"
+      oneShell: 1
+      larinClip: {fileID: 0}
+      zharovClip: {fileID: 0}
+    - squareCode: "16-\u0411"
+      oneShell: 0
+      larinClip: {fileID: 0}
+      zharovClip: {fileID: 0}
+    - squareCode: "16-\u0412"
+      oneShell: 1
+      larinClip: {fileID: 0}
+      zharovClip: {fileID: 0}
+    - squareCode: "16-\u0412"
+      oneShell: 0
+      larinClip: {fileID: 0}
+      zharovClip: {fileID: 0}
+    - squareCode: "15-\u0411"
+      oneShell: 1
+      larinClip: {fileID: 0}
+      zharovClip: {fileID: 0}
+    - squareCode: "15-\u0411"
+      oneShell: 0
+      larinClip: {fileID: 0}
+      zharovClip: {fileID: 0}
+    berezaClimax:
+      enabled: 0
+      shellWhistleClip: {fileID: 0}
+      impactAndCrackleClip: {fileID: 0}
+      deminCutOffClip: {fileID: 0}
+      whiteNoiseClip: {fileID: 0}
+      whistleDuration: 1.1
+      whiteNoiseDuration: 1.7
+      absoluteSilenceDuration: 10
+      allLampsBlinkDuration: 3
+    logbookNoteToAdd: 
+    flagToSet: 0
+    flagValue: 1
+    roomEffect: 0
+    endingToTrigger: 0
+    choices: []
+    autoNextNodeId: 
+  - nodeId: n04_kostrov_hit
+    speakerName: "\u041A\u041E\u0421\u0422\u0420\u041E\u0412 (\xAB\u0401\u0436\xBB)"
+    speakerColor: {r: 0.76, g: 0.9, b: 0.64, a: 1}
+    isItalic: 0
+    subtitleText: "\u0415\u0441\u0442\u044C! \u0412\u0438\u0434\u0435\u043B! \u041A\u0440\u0430\u0441\u0438\u0432\u043E
+      \u043B\u0435\u0433\u043B\u043E. \u0421\u043F\u0430\u0441\u0438\u0431\u043E,
+      \u041C\u0430\u044F\u043A. \u0421\u043B\u0443\u0448\u0430\u0439, \u0430 \u0442\u044B
+      \u043D\u043E\u0432\u0435\u043D\u044C\u043A\u0438\u0439? \u042F \u0442\u043E\u0436\u0435.
+      \u0422\u0440\u0435\u0442\u044C\u044F \u043D\u0435\u0434\u0435\u043B\u044F.
+      \u041D\u0443\u2026 \u0434\u0435\u0440\u0436\u0438\u0441\u044C \u0442\u0430\u043C.
+      \u041A\u043E\u043D\u0435\u0446 \u0441\u0432\u044F\u0437\u0438."
+    voiceClip: {fileID: 0}
+    fallbackDuration: 0
+    postLineDelay: 0.35
+    conditionRequiredFlag: 0
+    conditionForbiddenFlag: 0
+    skipToNodeId: 
+    waitAction: 7
+    expectedSubscriber: 0
+    requiredKeywordIds: []
+    actionHintText: "\u0412\u044B\u0442\u0430\u0449\u0438\u0442\u0435 \u0448\u043D\u0443\u0440\u044B
+      \u0438\u0437 \u043A\u043E\u043C\u043C\u0443\u0442\u0430\u0442\u043E\u0440\u0430
+      (\u041F\u041A\u041C \u2014 \u0432\u0435\u0440\u043D\u0443\u0442\u044C \u043D\u0430
+      \u0431\u0430\u0437\u0443)"
+    wrongPortHintText: 
+    secondaryAmbientProfile: 0
+    secondaryAmbientClip: {fileID: 0}
+    secondaryAmbientVolume: 0.28
+    remoteHangUpPorts: 04000000
+    hangUpPrimaryLine: 1
+    stopSecondaryAmbient: 1
+    fireMissionSuccessNodeId: 
+    fireMissionFailureNodeId: 
+    fireMissionVoiceVariants: []
+    berezaClimax:
+      enabled: 0
+      shellWhistleClip: {fileID: 0}
+      impactAndCrackleClip: {fileID: 0}
+      deminCutOffClip: {fileID: 0}
+      whiteNoiseClip: {fileID: 0}
+      whistleDuration: 1.1
+      whiteNoiseDuration: 1.7
+      absoluteSilenceDuration: 10
+      allLampsBlinkDuration: 3
+    logbookNoteToAdd: 
+    flagToSet: 0
+    flagValue: 1
+    roomEffect: 0
+    endingToTrigger: 0
+    choices: []
+    autoNextNodeId: 
+  - nodeId: n05_kostrov_miss
+    speakerName: "\u041A\u041E\u0421\u0422\u0420\u041E\u0412 (\xAB\u0401\u0436\xBB)"
+    speakerColor: {r: 0.76, g: 0.9, b: 0.64, a: 1}
+    isItalic: 0
+    subtitleText: "\u041C\u0430\u044F\u043A, \u044D\u0442\u043E \u0447\u0442\u043E
+      \u0431\u044B\u043B\u043E?! \u042D\u0442\u043E \u043C\u043D\u0435 \u0437\u0430
+      \u0441\u043F\u0438\u043D\u0443 \u043F\u0440\u0438\u043B\u0435\u0442\u0435\u043B\u043E!
+      \u0428\u0435\u0441\u0442\u043D\u0430\u0434\u0446\u0430\u0442\u044C-\u0411\u042D!
+      \u0411\u043E\u0440\u0438\u0441! \u041E\u0434\u0438\u043D \u0441\u043D\u0430\u0440\u044F\u0434!"
+    voiceClip: {fileID: 0}
+    fallbackDuration: 0
+    postLineDelay: 0.35
+    conditionRequiredFlag: 0
+    conditionForbiddenFlag: 0
+    skipToNodeId: 
+    waitAction: 0
+    expectedSubscriber: 0
+    requiredKeywordIds: []
+    actionHintText: 
+    wrongPortHintText: 
+    secondaryAmbientProfile: 0
+    secondaryAmbientClip: {fileID: 0}
+    secondaryAmbientVolume: 0.28
+    remoteHangUpPorts: 
+    hangUpPrimaryLine: 0
+    stopSecondaryAmbient: 0
+    fireMissionSuccessNodeId: 
+    fireMissionFailureNodeId: 
+    fireMissionVoiceVariants: []
+    berezaClimax:
+      enabled: 0
+      shellWhistleClip: {fileID: 0}
+      impactAndCrackleClip: {fileID: 0}
+      deminCutOffClip: {fileID: 0}
+      whiteNoiseClip: {fileID: 0}
+      whistleDuration: 1.1
+      whiteNoiseDuration: 1.7
+      absoluteSilenceDuration: 10
+      allLampsBlinkDuration: 3
+    logbookNoteToAdd: 
+    flagToSet: 0
+    flagValue: 1
+    roomEffect: 0
+    endingToTrigger: 0
+    choices: []
+    autoNextNodeId: n06_zharov_repeat
+  - nodeId: n06_zharov_repeat
+    speakerName: "\u0416\u0410\u0420\u041E\u0412 (\xAB\u0413\u0440\u043E\u043C\xBB)"
+    speakerColor: {r: 0.95, g: 0.64, b: 0.36, a: 1}
+    isItalic: 0
+    subtitleText: "\u041D\u0435 \u043F\u043E\u043D\u044F\u043B?! \u041F\u043E\u0432\u0442\u043E\u0440\u0438
+      \u0442\u043E\u0447\u043D\u0435\u0435, \u041C\u0430\u044F\u043A!"
+    voiceClip: {fileID: 0}
+    fallbackDuration: 0
+    postLineDelay: 0.35
+    conditionRequiredFlag: 0
+    conditionForbiddenFlag: 0
+    skipToNodeId: 
+    waitAction: 8
+    expectedSubscriber: 0
+    requiredKeywordIds: []
+    actionHintText: 
+    wrongPortHintText: 
+    secondaryAmbientProfile: 0
+    secondaryAmbientClip: {fileID: 0}
+    secondaryAmbientVolume: 0.28
+    remoteHangUpPorts: 
+    hangUpPrimaryLine: 0
+    stopSecondaryAmbient: 0
+    fireMissionSuccessNodeId: n04_kostrov_hit
+    fireMissionFailureNodeId: n05_kostrov_miss
+    fireMissionVoiceVariants:
+    - squareCode: "16-\u0411"
+      oneShell: 1
+      larinClip: {fileID: 0}
+      zharovClip: {fileID: 0}
+    - squareCode: "16-\u0411"
+      oneShell: 0
+      larinClip: {fileID: 0}
+      zharovClip: {fileID: 0}
+    - squareCode: "16-\u0412"
+      oneShell: 1
+      larinClip: {fileID: 0}
+      zharovClip: {fileID: 0}
+    - squareCode: "16-\u0412"
+      oneShell: 0
+      larinClip: {fileID: 0}
+      zharovClip: {fileID: 0}
+    - squareCode: "15-\u0411"
+      oneShell: 1
+      larinClip: {fileID: 0}
+      zharovClip: {fileID: 0}
+    - squareCode: "15-\u0411"
+      oneShell: 0
+      larinClip: {fileID: 0}
+      zharovClip: {fileID: 0}
+    berezaClimax:
+      enabled: 0
+      shellWhistleClip: {fileID: 0}
+      impactAndCrackleClip: {fileID: 0}
+      deminCutOffClip: {fileID: 0}
+      whiteNoiseClip: {fileID: 0}
+      whistleDuration: 1.1
+      whiteNoiseDuration: 1.7
+      absoluteSilenceDuration: 10
+      allLampsBlinkDuration: 3
+    logbookNoteToAdd: 
+    flagToSet: 0
+    flagValue: 1
+    roomEffect: 0
+    endingToTrigger: 0
+    choices: []
+    autoNextNodeId: 

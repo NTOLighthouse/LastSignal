@@ -39,6 +39,40 @@ namespace LastSignal.StoryCore
     }
 
     /// <summary>
+    /// Опциональные аудиоклипы для динамически собранного сообщения корректировки огня (Звонок 1.3).
+    /// Если клип не назначен — реплика воспроизводится по скорости чтения субтитров.
+    /// </summary>
+    [Serializable]
+    public sealed class FireMissionVoiceVariant
+    {
+        public string squareCode = "16-Б";
+        public bool oneShell = true;
+        public AudioClip larinClip;
+        public AudioClip zharovClip;
+    }
+
+    /// <summary>
+    /// Конфигурация узла кульминации гибели «Берёзы» (Звонок 1.6) со слотами под готовую озвучку и SFX.
+    /// </summary>
+    [Serializable]
+    public sealed class BerezaDeathClimaxData
+    {
+        public bool enabled = false;
+        [Tooltip("Свист приближающегося снаряда (~1.1с). Если пусто — процедурный звук.")]
+        public AudioClip shellWhistleClip;
+        [Tooltip("Удар и треск в эфире. Если пусто — процедурный звук.")]
+        public AudioClip impactAndCrackleClip;
+        [Tooltip("Обрывающаяся реплика Дёмина («…Маяк! Маяк, по нам…»).")]
+        public AudioClip deminCutOffClip;
+        [Tooltip("Белый шум перед резким обрывом (~1.7с). Если пусто — процедурный звук.")]
+        public AudioClip whiteNoiseClip;
+        [Min(0.5f)] public float whistleDuration = 1.1f;
+        [Min(0.5f)] public float whiteNoiseDuration = 1.7f;
+        [Min(1f)] public float absoluteSilenceDuration = 10.0f;
+        [Min(0.5f)] public float allLampsBlinkDuration = 3.0f;
+    }
+
+    /// <summary>
     /// Один шаг (реплика или точка ожидания) внутри звонка.
     /// В поле subtitleText можно выделять кликабельные слова простым синтаксисом:
     /// [шестнадцать-Б|sq_16b] — слово подсветится янтарём и по клику запишется в журнал под ID 'sq_16b'.
@@ -53,15 +87,18 @@ namespace LastSignal.StoryCore
         public string speakerName = "ДЁМИН";
         public Color speakerColor = new Color(0.96f, 0.78f, 0.44f, 1f);
 
+        [Tooltip("Отображать субтитры курсивом (шёпот, вполголоса).")]
+        public bool isItalic = false;
+
         [TextArea(2, 5)]
         [Tooltip("Текст субтитров. Для кликабельного слова используйте формат [видимый текст|id_слова].")]
         public string subtitleText = string.Empty;
 
-        [Tooltip("Аудиоклип озвучки. Если не назначен — используется Fallback Duration.")]
+        [Tooltip("Аудиоклип озвучки. Если не назначен — используется скорость чтения субтитров / Fallback Duration.")]
         public AudioClip voiceClip;
 
-        [Tooltip("Длительность показа реплики (сек), если озвучка ещё не записана.")]
-        [Min(0.5f)] public float fallbackDuration = 4.5f;
+        [Tooltip("Минимальная длительность показа реплики (сек), если озвучка ещё не назначена (0 = авто по длине текста).")]
+        [Min(0f)] public float fallbackDuration = 0f;
 
         [Tooltip("Небольшая пауза после завершения реплики перед переходом к следующему узлу.")]
         [Min(0f)] public float postLineDelay = 0.35f;
@@ -77,8 +114,37 @@ namespace LastSignal.StoryCore
         [Tooltip("Для WaitClickSubscriberInBook или WaitConnectPort/WaitDisconnectPort.")]
         public SubscriberId expectedSubscriber = SubscriberId.None;
 
+        [Tooltip("Для WaitRecordKeywords: список ID слов, которые игрок должен кликнуть в субтитрах.")]
+        public List<string> requiredKeywordIds = new List<string>();
+
         [Tooltip("Короткая ненавязчивая подсказка внизу экрана, пока диалог ждёт действия (опционально).")]
         public string actionHintText = string.Empty;
+
+        [Tooltip("Мягкая подсказка, если игрок воткнул штекер не в то гнездо при WaitConnectPort.")]
+        public string wrongPortHintText = string.Empty;
+
+        [Header("Подключение/отключение линий на этом узле")]
+        [Tooltip("Если указано — при завершении ожидания WaitConnectPort запускает фон второй линии.")]
+        public SubscriberAmbientProfile secondaryAmbientProfile = SubscriberAmbientProfile.None;
+        public AudioClip secondaryAmbientClip;
+        [Range(0f, 1f)] public float secondaryAmbientVolume = 0.28f;
+
+        [Tooltip("Порты, которые вешают трубку в конце этого узла (щелчок реле, стоп фона, лампа гаснет).")]
+        public List<SubscriberId> remoteHangUpPorts = new List<SubscriberId>();
+
+        [Tooltip("Если включено — основная линия звонка вешает трубку (пауза по выдёргиванию отключается).")]
+        public bool hangUpPrimaryLine = false;
+
+        [Tooltip("Остановить фон второй линии (например, когда Кобра вешает трубку, а Кузница ещё говорит).")]
+        public bool stopSecondaryAmbient = false;
+
+        [Header("Сборка сообщения «Грому» (только для WaitFireMissionAssembly)")]
+        public string fireMissionSuccessNodeId = string.Empty;
+        public string fireMissionFailureNodeId = string.Empty;
+        public List<FireMissionVoiceVariant> fireMissionVoiceVariants = new List<FireMissionVoiceVariant>();
+
+        [Header("Кульминация гибели «Берёзы» (Звонок 1.6)")]
+        public BerezaDeathClimaxData berezaClimax = new BerezaDeathClimaxData();
 
         [Header("Реакция книги, флагов и комнаты")]
         [Tooltip("Заметка на полях книги, которую Ларин запишет карандашом в этом узле.")]
@@ -119,6 +185,8 @@ namespace LastSignal.StoryCore
 
         [Tooltip("Фоновый звук абонента в эфире (гул узла, лес со сверчками, пишущая машинка и т.д.).")]
         public AudioClip callerAmbientLoop;
+        [Tooltip("Процедурный профиль фона линии, если callerAmbientLoop ещё не назначен.")]
+        public SubscriberAmbientProfile proceduralAmbientProfile = SubscriberAmbientProfile.None;
         [Range(0f, 1f)] public float callerAmbientVolume = 0.28f;
 
         [Header("Расписание и условия запуска")]
@@ -129,6 +197,12 @@ namespace LastSignal.StoryCore
         [Tooltip("Если включено — звонок стартует по очереди после предыдущего (с задержкой), не дожидаясь точных часов.")]
         public bool startImmediatelyInSequence = true;
         [Min(0f)] public float delayBeforeRingingSeconds = 1.5f;
+
+        [Tooltip("Пауза после завершения этого звонка перед следующим звонком в очереди (сек).")]
+        [Min(0f)] public float postCallPauseSeconds = 3.5f;
+
+        [Tooltip("Если включено — в середине паузы после этого звонка гремит один глухой далёкий разрыв (вздрагивает лампа).")]
+        public bool distantExplosionMidPostCallPause = false;
 
         [Tooltip("Переопределение терпения абонента (0 = взять из настроек ночи, < 0 = бесконечное терпение).")]
         public float patienceOverrideSeconds = 0f;

@@ -95,10 +95,37 @@ namespace LastSignal.StoryCore
         /// Показывает чёрный экран с посимвольной белой машинописью, затем плавно открывает подвал
         /// и разблокирует управление (с курсором строго в центре экрана).
         /// </summary>
-        public Coroutine ShowTypewriterCard(string text, float holdDurationSeconds, Action onFinished = null)
+        public Coroutine ShowTypewriterCard(
+            string text,
+            float holdDurationSeconds,
+            Action onFinished = null,
+            Action onBeforeFadeOut = null)
         {
             StopActiveRoutine();
-            _activeCoroutine = StartCoroutine(TypewriterCardRoutine(text ?? string.Empty, holdDurationSeconds, onFinished));
+            _activeCoroutine = StartCoroutine(TypewriterCardRoutine(text ?? string.Empty, holdDurationSeconds, onFinished, onBeforeFadeOut));
+            return _activeCoroutine;
+        }
+
+        /// <summary>
+        /// Показывает финальный титр ночи на чёрном экране: сначала печатает основной текст,
+        /// после паузы выводит подзаголовок следующей ночи (например, «Ночь вторая. Чужие голоса»).
+        /// </summary>
+        public Coroutine ShowNightClosingCard(
+            string mainText,
+            string subtitleText,
+            float subtitleDelaySeconds,
+            float holdAfterSubtitleSeconds,
+            bool fadeOutAtEnd,
+            Action onFinished = null)
+        {
+            StopActiveRoutine();
+            _activeCoroutine = StartCoroutine(NightClosingCardRoutine(
+                mainText ?? string.Empty,
+                subtitleText ?? string.Empty,
+                subtitleDelaySeconds,
+                holdAfterSubtitleSeconds,
+                fadeOutAtEnd,
+                onFinished));
             return _activeCoroutine;
         }
 
@@ -146,7 +173,7 @@ namespace LastSignal.StoryCore
             if (overlayRoot != null) overlayRoot.SetActive(false);
         }
 
-        private IEnumerator TypewriterCardRoutine(string fullText, float holdSeconds, Action onFinished)
+        private IEnumerator TypewriterCardRoutine(string fullText, float holdSeconds, Action onFinished, Action onBeforeFadeOut)
         {
             GameplayInputGate.AcquireBlock(this, hideReticle: true);
 
@@ -217,10 +244,16 @@ namespace LastSignal.StoryCore
                 yield return null;
             }
 
+            if (onBeforeFadeOut != null)
+            {
+                onBeforeFadeOut.Invoke();
+                yield return WaitUnscaledSeconds(0.32f);
+            }
+
             // Плавно открываем сцену из темноты; управление и курсор в центре экрана включаются ровно по завершении заставки.
             if (overlayCanvasGroup != null)
             {
-                yield return FadeCanvasGroupRoutine(1f, 0f, 0.75f);
+                yield return FadeCanvasGroupRoutine(1f, 0f, 1.05f);
                 overlayCanvasGroup.blocksRaycasts = false;
                 overlayCanvasGroup.interactable = false;
             }
@@ -230,6 +263,126 @@ namespace LastSignal.StoryCore
 
             _activeCoroutine = null;
             GameplayInputGate.ReleaseBlock(this);
+            onFinished?.Invoke();
+        }
+
+        private IEnumerator NightClosingCardRoutine(
+            string mainText,
+            string subtitleText,
+            float subtitleDelaySeconds,
+            float holdAfterSubtitleSeconds,
+            bool fadeOutAtEnd,
+            Action onFinished)
+        {
+            GameplayInputGate.AcquireBlock(this, hideReticle: true);
+
+            if (overlayRoot != null) overlayRoot.SetActive(true);
+            if (summaryGroup != null) summaryGroup.SetActive(false);
+            if (typewriterGroup != null) typewriterGroup.SetActive(true);
+
+            if (typewriterText != null)
+            {
+                typewriterText.text = mainText;
+                typewriterText.ForceMeshUpdate();
+                typewriterText.maxVisibleCharacters = 0;
+            }
+
+            if (overlayCanvasGroup != null)
+            {
+                overlayCanvasGroup.blocksRaycasts = true;
+                overlayCanvasGroup.interactable = true;
+                yield return FadeCanvasGroupRoutine(overlayCanvasGroup.alpha, 1f, 1.1f);
+            }
+
+            _isHoldingOpaqueBlack = true;
+            yield return WaitUnscaledSeconds(0.45f);
+
+            int mainCharCount = 0;
+            if (typewriterText != null)
+            {
+                typewriterText.ForceMeshUpdate();
+                mainCharCount = typewriterText.textInfo.characterCount;
+                if (mainCharCount <= 0) mainCharCount = mainText.Length;
+
+                float visible = 0f;
+                while (visible < mainCharCount)
+                {
+                    if (WasSkipPressed())
+                    {
+                        break;
+                    }
+
+                    visible += Time.unscaledDeltaTime * charactersPerSecond;
+                    typewriterText.maxVisibleCharacters = Mathf.Clamp(Mathf.FloorToInt(visible), 0, mainCharCount);
+                    yield return null;
+                }
+
+                typewriterText.maxVisibleCharacters = mainCharCount;
+            }
+
+            if (!string.IsNullOrWhiteSpace(subtitleText))
+            {
+                float waitSub = Mathf.Max(0.5f, subtitleDelaySeconds);
+                while (waitSub > 0f)
+                {
+                    if (WasSkipPressed())
+                    {
+                        break;
+                    }
+                    waitSub -= Time.unscaledDeltaTime;
+                    yield return null;
+                }
+
+                if (typewriterText != null)
+                {
+                    typewriterText.text = $"{mainText}\n\n<size=82%><color=#E8C57B>{subtitleText}</color></size>";
+                    typewriterText.ForceMeshUpdate();
+                    int totalWithSub = typewriterText.textInfo.characterCount;
+                    typewriterText.maxVisibleCharacters = mainCharCount;
+
+                    float vis = mainCharCount;
+                    while (vis < totalWithSub)
+                    {
+                        if (WasSkipPressed())
+                        {
+                            break;
+                        }
+                        vis += Time.unscaledDeltaTime * (charactersPerSecond * 0.85f);
+                        typewriterText.maxVisibleCharacters = Mathf.Clamp(Mathf.FloorToInt(vis), mainCharCount, totalWithSub);
+                        yield return null;
+                    }
+
+                    typewriterText.maxVisibleCharacters = totalWithSub;
+                }
+            }
+
+            if (fadeOutAtEnd)
+            {
+                float rem = Mathf.Max(0.8f, holdAfterSubtitleSeconds);
+                while (rem > 0f)
+                {
+                    if (WasSkipPressed())
+                    {
+                        break;
+                    }
+                    rem -= Time.unscaledDeltaTime;
+                    yield return null;
+                }
+
+                if (overlayCanvasGroup != null)
+                {
+                    yield return FadeCanvasGroupRoutine(1f, 0f, 0.85f);
+                    overlayCanvasGroup.blocksRaycasts = false;
+                    overlayCanvasGroup.interactable = false;
+                }
+
+                if (typewriterGroup != null) typewriterGroup.SetActive(false);
+                if (overlayRoot != null) overlayRoot.SetActive(false);
+                _isHoldingOpaqueBlack = false;
+                GameplayInputGate.ReleaseBlock(this);
+            }
+
+            _activeCoroutine = null;
             onFinished?.Invoke();
         }
 
